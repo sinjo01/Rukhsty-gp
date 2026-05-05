@@ -5,16 +5,13 @@ import { usersTable } from "./users";
 
 export const auditLogsTable = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  performedByUserId: uuid("performed_by_user_id").references(
-    () => usersTable.id
-  ),
+  actorUserId: uuid("actor_user_id").references(() => usersTable.id),
   action: text("action").notNull(),
-  entityType: text("entity_type").notNull(),
+  entityType: text("entity_type"),
   entityId: uuid("entity_id"),
-  previousState: jsonb("previous_state"),
-  newState: jsonb("new_state"),
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
   ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

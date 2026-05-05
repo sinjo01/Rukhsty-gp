@@ -1,57 +1,47 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: RukhsTy API — Driving License Platform for Jordan
+  description: Rukhsty - Jordanian Digital Licensing Platform API
 servers:
   - url: /api
-    description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: auth
-    description: Authentication operations
+  - name: profile
+  - name: services
+  - name: licenseCategories
   - name: applications
-    description: License applications
   - name: documents
-    description: Application documents
   - name: centers
-    description: Driving and medical centers
-  - name: slots
-    description: Time slot management
   - name: appointments
-    description: Appointment booking
-  - name: testResults
-    description: Test results
+  - name: training
+  - name: medical
+  - name: exams
+  - name: licenses
+  - name: vehicles
   - name: notifications
-    description: User notifications
+  - name: officer
   - name: admin
-    description: Admin operations
-  - name: dashboard
-    description: Dashboard and summary endpoints
 
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
       responses:
         "200":
-          description: Healthy
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  # ─── AUTH ───────────────────────────────────────────────────────────────────
-
+  # AUTH
   /auth/register:
     post:
       operationId: register
       tags: [auth]
-      summary: Register a new citizen
       requestBody:
         required: true
         content:
@@ -66,7 +56,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
         "400":
-          description: Validation error
+          description: Error
           content:
             application/json:
               schema:
@@ -76,7 +66,6 @@ paths:
     post:
       operationId: login
       tags: [auth]
-      summary: Log in
       requestBody:
         required: true
         content:
@@ -91,7 +80,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
-          description: Invalid credentials
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -101,7 +90,6 @@ paths:
     post:
       operationId: logout
       tags: [auth]
-      summary: Log out
       responses:
         "200":
           description: Logged out
@@ -114,14 +102,13 @@ paths:
     get:
       operationId: getMe
       tags: [auth]
-      summary: Get current user profile
       responses:
         "200":
           description: Current user
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/UserWithProfile"
         "401":
           description: Unauthorized
           content:
@@ -129,16 +116,73 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  # ─── APPLICATIONS ────────────────────────────────────────────────────────────
+  # PROFILE
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    put:
+      operationId: updateProfile
+      tags: [profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
 
+  # SERVICES
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  # LICENSE CATEGORIES
+  /license-categories:
+    get:
+      operationId: listLicenseCategories
+      tags: [licenseCategories]
+      responses:
+        "200":
+          description: License categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LicenseCategory"
+
+  # APPLICATIONS
   /applications:
     get:
       operationId: listApplications
       tags: [applications]
-      summary: List citizen's own applications
       responses:
         "200":
-          description: List of applications
+          description: User's applications
           content:
             application/json:
               schema:
@@ -148,7 +192,6 @@ paths:
     post:
       operationId: createApplication
       tags: [applications]
-      summary: Create a new license application
       requestBody:
         required: true
         content:
@@ -167,7 +210,6 @@ paths:
     get:
       operationId: getApplication
       tags: [applications]
-      summary: Get a single application
       parameters:
         - name: id
           in: path
@@ -176,23 +218,16 @@ paths:
             type: string
       responses:
         "200":
-          description: Application details
+          description: Application detail
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApplicationDetail"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
   /applications/{id}/submit:
     post:
       operationId: submitApplication
       tags: [applications]
-      summary: Submit application for review
       parameters:
         - name: id
           in: path
@@ -201,28 +236,44 @@ paths:
             type: string
       responses:
         "200":
-          description: Application submitted
+          description: Submitted
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Application"
 
-  # ─── DOCUMENTS ───────────────────────────────────────────────────────────────
-
-  /applications/{applicationId}/documents:
-    get:
-      operationId: listDocuments
-      tags: [documents]
-      summary: List documents for an application
+  /applications/{id}/select-training-center:
+    post:
+      operationId: selectTrainingCenter
+      tags: [applications]
       parameters:
-        - name: applicationId
+        - name: id
           in: path
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectCenterBody"
       responses:
         "200":
-          description: List of documents
+          description: Center selected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  # DOCUMENTS
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      responses:
+        "200":
+          description: Documents
           content:
             application/json:
               schema:
@@ -232,13 +283,6 @@ paths:
     post:
       operationId: uploadDocument
       tags: [documents]
-      summary: Upload a document for an application
-      parameters:
-        - name: applicationId
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         content:
@@ -253,80 +297,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Document"
 
-  /documents/{id}/review:
-    patch:
-      operationId: reviewDocument
-      tags: [documents]
-      summary: Admin reviews a document
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewDocumentBody"
-      responses:
-        "200":
-          description: Document reviewed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-
-  # ─── DRIVING CENTERS ─────────────────────────────────────────────────────────
-
+  # CENTERS
   /centers:
     get:
       operationId: listCenters
       tags: [centers]
-      summary: List driving centers
       parameters:
-        - name: city
+        - name: centerType
           in: query
           schema:
             type: string
-        - name: type
+        - name: governorate
           in: query
           schema:
             type: string
-            enum: [driving, medical]
       responses:
         "200":
-          description: List of centers
+          description: Centers
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Center"
-    post:
-      operationId: createCenter
-      tags: [centers]
-      summary: Create a driving center (admin)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateCenterBody"
-      responses:
-        "201":
-          description: Center created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Center"
 
   /centers/{id}:
     get:
       operationId: getCenter
       tags: [centers]
-      summary: Get center details
       parameters:
         - name: id
           in: path
@@ -335,77 +333,20 @@ paths:
             type: string
       responses:
         "200":
-          description: Center details
+          description: Center detail
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Center"
 
-  # ─── TIME SLOTS ──────────────────────────────────────────────────────────────
-
-  /centers/{centerId}/slots:
-    get:
-      operationId: listSlots
-      tags: [slots]
-      summary: List available time slots for a center
-      parameters:
-        - name: centerId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: slotType
-          in: query
-          schema:
-            type: string
-            enum: [vision_test, theory_test]
-        - name: date
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Available slots
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TimeSlot"
-    post:
-      operationId: createSlot
-      tags: [slots]
-      summary: Create a time slot (center staff)
-      parameters:
-        - name: centerId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateSlotBody"
-      responses:
-        "201":
-          description: Slot created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TimeSlot"
-
-  # ─── APPOINTMENTS ────────────────────────────────────────────────────────────
-
+  # APPOINTMENTS
   /appointments:
     get:
       operationId: listAppointments
       tags: [appointments]
-      summary: List citizen's appointments
       responses:
         "200":
-          description: Appointments list
+          description: Appointments
           content:
             application/json:
               schema:
@@ -415,7 +356,6 @@ paths:
     post:
       operationId: bookAppointment
       tags: [appointments]
-      summary: Book an appointment
       requestBody:
         required: true
         content:
@@ -424,26 +364,7 @@ paths:
               $ref: "#/components/schemas/BookAppointmentBody"
       responses:
         "201":
-          description: Appointment booked
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Appointment"
-
-  /appointments/{id}:
-    get:
-      operationId: getAppointment
-      tags: [appointments]
-      summary: Get appointment details
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Appointment
+          description: Booked
           content:
             application/json:
               schema:
@@ -453,19 +374,12 @@ paths:
     post:
       operationId: cancelAppointment
       tags: [appointments]
-      summary: Cancel an appointment
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CancelAppointmentBody"
       responses:
         "200":
           description: Cancelled
@@ -474,32 +388,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Appointment"
 
-  # ─── TEST RESULTS ────────────────────────────────────────────────────────────
-
-  /test-results:
-    post:
-      operationId: recordTestResult
-      tags: [testResults]
-      summary: Record a test result (center staff)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RecordTestResultBody"
-      responses:
-        "201":
-          description: Result recorded
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TestResult"
-
-  /applications/{applicationId}/test-results:
+  # TRAINING
+  /training/{applicationId}:
     get:
-      operationId: listTestResults
-      tags: [testResults]
-      summary: Get test results for an application
+      operationId: getTrainingRecord
+      tags: [training]
       parameters:
         - name: applicationId
           in: path
@@ -508,21 +401,101 @@ paths:
             type: string
       responses:
         "200":
-          description: Test results
+          description: Training record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingRecord"
+
+  # MEDICAL
+  /medical/{applicationId}:
+    get:
+      operationId: getMedicalTest
+      tags: [medical]
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Medical test
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalTest"
+
+  # EXAMS
+  /exams/{applicationId}:
+    get:
+      operationId: listExams
+      tags: [exams]
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Exams
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/TestResult"
+                  $ref: "#/components/schemas/Exam"
 
-  # ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+  # LICENSES
+  /licenses/my:
+    get:
+      operationId: getMyLicense
+      tags: [licenses]
+      responses:
+        "200":
+          description: My driving license
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrivingLicense"
 
+  # VEHICLES
+  /vehicles:
+    get:
+      operationId: listVehicles
+      tags: [vehicles]
+      responses:
+        "200":
+          description: Vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vehicle"
+    post:
+      operationId: addVehicle
+      tags: [vehicles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddVehicleBody"
+      responses:
+        "201":
+          description: Vehicle added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+
+  # NOTIFICATIONS
   /notifications:
     get:
       operationId: listNotifications
       tags: [notifications]
-      summary: List current user's notifications
       responses:
         "200":
           description: Notifications
@@ -537,7 +510,6 @@ paths:
     patch:
       operationId: markNotificationRead
       tags: [notifications]
-      summary: Mark a notification as read
       parameters:
         - name: id
           in: path
@@ -546,7 +518,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Marked as read
+          description: Marked read
           content:
             application/json:
               schema:
@@ -554,24 +526,21 @@ paths:
 
   /notifications/read-all:
     post:
-      operationId: markAllNotificationsRead
+      operationId: markAllRead
       tags: [notifications]
-      summary: Mark all notifications as read
       responses:
         "200":
-          description: All marked as read
+          description: All read
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
-  # ─── DASHBOARD ───────────────────────────────────────────────────────────────
-
+  # DASHBOARD
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
-      tags: [dashboard]
-      summary: Get citizen dashboard summary
+      tags: [applications]
       responses:
         "200":
           description: Dashboard summary
@@ -580,13 +549,131 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
-  # ─── ADMIN ───────────────────────────────────────────────────────────────────
+  # OFFICER ENDPOINTS
+  /officer/appointments:
+    get:
+      operationId: listOfficerAppointments
+      tags: [officer]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Officer's center appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentWithUser"
 
+  /officer/appointments/{id}/update:
+    patch:
+      operationId: updateAppointmentStatus
+      tags: [officer]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentStatusBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /officer/training/{applicationId}/update:
+    patch:
+      operationId: updateTraining
+      tags: [officer]
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTrainingBody"
+      responses:
+        "200":
+          description: Training updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingRecord"
+
+  /officer/medical/record:
+    post:
+      operationId: recordMedicalTest
+      tags: [officer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordMedicalTestBody"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalTest"
+
+  /officer/exams/record:
+    post:
+      operationId: recordExam
+      tags: [officer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordExamBody"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
+
+  /officer/dashboard:
+    get:
+      operationId: getOfficerDashboard
+      tags: [officer]
+      responses:
+        "200":
+          description: Officer dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfficerDashboard"
+
+  # ADMIN ENDPOINTS
   /admin/stats:
     get:
       operationId: getAdminStats
       tags: [admin]
-      summary: Get admin dashboard statistics
       responses:
         "200":
           description: Admin stats
@@ -599,7 +686,6 @@ paths:
     get:
       operationId: listAdminApplications
       tags: [admin]
-      summary: List all applications (admin)
       parameters:
         - name: status
           in: query
@@ -619,13 +705,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminApplicationsResponse"
+                $ref: "#/components/schemas/PaginatedApplications"
 
   /admin/applications/{id}/review:
     patch:
-      operationId: reviewApplication
+      operationId: adminReviewApplication
       tags: [admin]
-      summary: Admin reviews (approve/reject) an application
       parameters:
         - name: id
           in: path
@@ -637,35 +722,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReviewApplicationBody"
+              $ref: "#/components/schemas/AdminReviewBody"
       responses:
         "200":
-          description: Application reviewed
+          description: Reviewed
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Application"
 
-  /admin/centers:
-    get:
-      operationId: listAdminCenters
-      tags: [admin]
-      summary: List all centers with stats (admin)
-      responses:
-        "200":
-          description: Centers with stats
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CenterWithStats"
-
   /admin/users:
     get:
       operationId: listAdminUsers
       tags: [admin]
-      summary: List all users (admin)
       parameters:
         - name: role
           in: query
@@ -677,17 +746,46 @@ paths:
             type: integer
       responses:
         "200":
-          description: Users list
+          description: Users
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminUsersResponse"
+                $ref: "#/components/schemas/PaginatedUsers"
+
+  /admin/centers:
+    get:
+      operationId: listAdminCenters
+      tags: [admin]
+      responses:
+        "200":
+          description: Centers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Center"
+    post:
+      operationId: createAdminCenter
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCenterBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Center"
 
   /admin/recent-activity:
     get:
       operationId: getRecentActivity
       tags: [admin]
-      summary: Get recent activity feed for admin
       responses:
         "200":
           description: Recent activity
@@ -723,8 +821,7 @@ components:
           type: string
       required: [error, message]
 
-    # ─── AUTH ─────────────────────────────────────────────────────────────────
-
+    # AUTH
     RegisterBody:
       type: object
       properties:
@@ -732,22 +829,35 @@ components:
           type: string
         password:
           type: string
-        fullNameAr:
+        firstName:
           type: string
-        fullNameEn:
+        secondName:
           type: string
+        thirdName:
+          type: string
+        familyName:
+          type: string
+        age:
+          type: integer
         nationalId:
           type: string
         phone:
           type: string
-        dateOfBirth:
+        governorate:
           type: string
-        gender:
+        city:
           type: string
-        preferredLang:
+        area:
           type: string
-          enum: [ar, en]
-      required: [email, password, fullNameAr, fullNameEn, nationalId]
+        address:
+          type: string
+        personalPhotoUrl:
+          type: string
+        idFrontUrl:
+          type: string
+        idBackUrl:
+          type: string
+      required: [email, password, firstName, secondName, thirdName, familyName, age, nationalId]
 
     LoginBody:
       type: object
@@ -764,7 +874,7 @@ components:
         token:
           type: string
         user:
-          $ref: "#/components/schemas/User"
+          $ref: "#/components/schemas/UserWithProfile"
       required: [token, user]
 
     User:
@@ -776,67 +886,179 @@ components:
           type: string
         role:
           type: string
-          enum: [citizen, traffic_admin, center_staff, medical_staff, super_admin]
-        fullNameAr:
-          type: string
-        fullNameEn:
-          type: string
-        nationalId:
-          type: string
-        phone:
-          type: string
-        dateOfBirth:
-          type: string
-        gender:
-          type: string
-        preferredLang:
-          type: string
+          enum: [USER, ADMIN, TRAINING_CENTER_OFFICER, MEDICAL_CENTER_OFFICER, THEORY_EXAM_OFFICER, PRACTICAL_EXAM_OFFICER, DVLD_OFFICER]
+        isEmailVerified:
+          type: boolean
         isActive:
           type: boolean
         createdAt:
           type: string
-      required: [id, email, role, fullNameAr, fullNameEn, isActive, createdAt]
+      required: [id, email, role, isEmailVerified, isActive, createdAt]
 
-    # ─── APPLICATIONS ─────────────────────────────────────────────────────────
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        firstName:
+          type: string
+        secondName:
+          type: string
+        thirdName:
+          type: string
+        familyName:
+          type: string
+        age:
+          type: integer
+        nationalId:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        governorate:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        personalPhotoUrl:
+          type: string
+          nullable: true
+        idFrontUrl:
+          type: string
+          nullable: true
+        idBackUrl:
+          type: string
+          nullable: true
+        profileStatus:
+          type: string
+          enum: [INCOMPLETE, COMPLETE]
+        createdAt:
+          type: string
+      required: [id, userId, firstName, secondName, thirdName, familyName, age, nationalId, profileStatus, createdAt]
 
+    UserWithProfile:
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          properties:
+            profile:
+              $ref: "#/components/schemas/UserProfile"
+              nullable: true
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        secondName:
+          type: string
+        thirdName:
+          type: string
+        familyName:
+          type: string
+        phone:
+          type: string
+        governorate:
+          type: string
+        city:
+          type: string
+        area:
+          type: string
+        address:
+          type: string
+        personalPhotoUrl:
+          type: string
+        idFrontUrl:
+          type: string
+        idBackUrl:
+          type: string
+
+    # SERVICES
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required: [id, nameAr, nameEn, code, isActive]
+
+    LicenseCategory:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        minimumAge:
+          type: integer
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required: [id, code, nameAr, nameEn, minimumAge, isActive]
+
+    # APPLICATIONS
     CreateApplicationBody:
       type: object
       properties:
-        licenseType:
+        serviceId:
           type: string
-          enum: [car, motorcycle, truck, bus]
-      required: [licenseType]
+        licenseCategoryId:
+          type: string
+          nullable: true
+        governorate:
+          type: string
+        residenceArea:
+          type: string
+      required: [serviceId, governorate, residenceArea]
 
     Application:
       type: object
       properties:
         id:
           type: string
+        userId:
+          type: string
+        serviceId:
+          type: string
+          nullable: true
+        licenseCategoryId:
+          type: string
+          nullable: true
         applicationNumber:
           type: string
-        citizenId:
-          type: string
-        licenseType:
-          type: string
-          enum: [car, motorcycle, truck, bus]
         status:
           type: string
-          enum:
-            - draft
-            - submitted
-            - documents_under_review
-            - documents_approved
-            - documents_rejected
-            - vision_test_scheduled
-            - vision_test_passed
-            - vision_test_failed
-            - theory_test_scheduled
-            - theory_test_passed
-            - theory_test_failed
-            - approved
-            - rejected
-            - cancelled
-        reviewNotes:
+        currentStep:
+          type: string
+        governorate:
+          type: string
+          nullable: true
+        residenceArea:
           type: string
           nullable: true
         rejectionReason:
@@ -845,27 +1067,30 @@ components:
         submittedAt:
           type: string
           nullable: true
-        approvedAt:
+        completedAt:
           type: string
           nullable: true
         createdAt:
           type: string
         updatedAt:
           type: string
-      required:
-        - id
-        - applicationNumber
-        - citizenId
-        - licenseType
-        - status
-        - createdAt
-        - updatedAt
+        service:
+          $ref: "#/components/schemas/Service"
+          nullable: true
+        licenseCategory:
+          $ref: "#/components/schemas/LicenseCategory"
+          nullable: true
+      required: [id, userId, applicationNumber, status, currentStep, createdAt, updatedAt]
 
     ApplicationDetail:
       allOf:
         - $ref: "#/components/schemas/Application"
         - type: object
           properties:
+            steps:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApplicationStep"
             documents:
               type: array
               items:
@@ -874,265 +1099,187 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Appointment"
-            testResults:
+            trainingRecord:
+              $ref: "#/components/schemas/TrainingRecord"
+              nullable: true
+            medicalTest:
+              $ref: "#/components/schemas/MedicalTest"
+              nullable: true
+            exams:
               type: array
               items:
-                $ref: "#/components/schemas/TestResult"
+                $ref: "#/components/schemas/Exam"
 
-    # ─── DOCUMENTS ────────────────────────────────────────────────────────────
+    ApplicationStep:
+      type: object
+      properties:
+        id:
+          type: string
+        applicationId:
+          type: string
+        stepKey:
+          type: string
+        stepNameAr:
+          type: string
+        stepNameEn:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, COMPLETED, FAILED, SKIPPED]
+        orderNumber:
+          type: integer
+        startedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [id, applicationId, stepKey, stepNameAr, stepNameEn, status, orderNumber]
 
+    SelectCenterBody:
+      type: object
+      properties:
+        centerId:
+          type: string
+      required: [centerId]
+
+    # DOCUMENTS
     UploadDocumentBody:
       type: object
       properties:
-        documentType:
+        applicationId:
           type: string
-          enum:
-            - national_id_front
-            - national_id_back
-            - passport_photo
-            - medical_certificate
-            - residence_proof
-            - previous_license
-            - other
-        fileName:
+          nullable: true
+        documentType:
           type: string
         fileUrl:
           type: string
+        fileName:
+          type: string
         mimeType:
           type: string
-      required: [documentType, fileName, fileUrl, mimeType]
-
-    ReviewDocumentBody:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [approved, rejected]
-        rejectionReason:
-          type: string
-      required: [status]
+      required: [documentType, fileUrl, fileName, mimeType]
 
     Document:
       type: object
       properties:
         id:
           type: string
+        userId:
+          type: string
         applicationId:
           type: string
+          nullable: true
         documentType:
-          type: string
-        fileName:
           type: string
         fileUrl:
           type: string
+        fileName:
+          type: string
+          nullable: true
         mimeType:
           type: string
-        status:
+          nullable: true
+        verificationStatus:
           type: string
-          enum: [pending, approved, rejected]
+          enum: [PENDING, APPROVED, REJECTED]
         rejectionReason:
           type: string
           nullable: true
-        reviewedAt:
+        verifiedAt:
           type: string
           nullable: true
         createdAt:
           type: string
-      required:
-        - id
-        - applicationId
-        - documentType
-        - fileName
-        - fileUrl
-        - mimeType
-        - status
-        - createdAt
+      required: [id, userId, documentType, fileUrl, verificationStatus, createdAt]
 
-    # ─── CENTERS ──────────────────────────────────────────────────────────────
-
-    CreateCenterBody:
-      type: object
-      properties:
-        nameAr:
-          type: string
-        nameEn:
-          type: string
-        licenseNumber:
-          type: string
-        phone:
-          type: string
-        email:
-          type: string
-        addressAr:
-          type: string
-        addressEn:
-          type: string
-        city:
-          type: string
-        latitude:
-          type: number
-          nullable: true
-        longitude:
-          type: number
-          nullable: true
-        centerType:
-          type: string
-          enum: [driving, medical]
-        offersVisionTest:
-          type: boolean
-        offersTheoryTest:
-          type: boolean
-        offersDrivingTraining:
-          type: boolean
-      required: [nameAr, nameEn, licenseNumber, phone, addressAr, addressEn, city, centerType]
-
+    # CENTERS
     Center:
       type: object
       properties:
         id:
           type: string
+        centerType:
+          type: string
         nameAr:
           type: string
         nameEn:
           type: string
-        licenseNumber:
+          nullable: true
+        governorate:
+          type: string
+        city:
+          type: string
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: string
+          nullable: true
+        longitude:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, centerType, nameAr, governorate, isActive, createdAt]
+
+    CreateCenterBody:
+      type: object
+      properties:
+        centerType:
+          type: string
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        governorate:
+          type: string
+        city:
+          type: string
+        area:
+          type: string
+        address:
           type: string
         phone:
           type: string
         email:
           type: string
-          nullable: true
-        addressAr:
-          type: string
-        addressEn:
-          type: string
-        city:
-          type: string
-        latitude:
-          type: number
-          nullable: true
-        longitude:
-          type: number
-          nullable: true
-        status:
-          type: string
-          enum: [active, inactive, suspended]
-        centerType:
-          type: string
-          enum: [driving, medical]
-        offersVisionTest:
-          type: boolean
-        offersTheoryTest:
-          type: boolean
-        offersDrivingTraining:
-          type: boolean
-        createdAt:
-          type: string
-      required:
-        - id
-        - nameAr
-        - nameEn
-        - licenseNumber
-        - phone
-        - addressAr
-        - addressEn
-        - city
-        - status
-        - centerType
-        - createdAt
+      required: [centerType, nameAr, governorate]
 
-    CenterWithStats:
-      allOf:
-        - $ref: "#/components/schemas/Center"
-        - type: object
-          properties:
-            totalAppointments:
-              type: integer
-            upcomingAppointments:
-              type: integer
-
-    # ─── SLOTS ────────────────────────────────────────────────────────────────
-
-    CreateSlotBody:
-      type: object
-      properties:
-        slotType:
-          type: string
-          enum: [vision_test, theory_test]
-        date:
-          type: string
-        startTime:
-          type: string
-        endTime:
-          type: string
-        capacity:
-          type: integer
-      required: [slotType, date, startTime, endTime, capacity]
-
-    TimeSlot:
-      type: object
-      properties:
-        id:
-          type: string
-        slotType:
-          type: string
-          enum: [vision_test, theory_test]
-        drivingCenterId:
-          type: string
-          nullable: true
-        medicalCenterId:
-          type: string
-          nullable: true
-        date:
-          type: string
-        startTime:
-          type: string
-        endTime:
-          type: string
-        capacity:
-          type: integer
-        bookedCount:
-          type: integer
-        isActive:
-          type: boolean
-        availableCount:
-          type: integer
-        createdAt:
-          type: string
-      required:
-        - id
-        - slotType
-        - date
-        - startTime
-        - endTime
-        - capacity
-        - bookedCount
-        - isActive
-        - availableCount
-        - createdAt
-
-    # ─── APPOINTMENTS ─────────────────────────────────────────────────────────
-
+    # APPOINTMENTS
     BookAppointmentBody:
       type: object
       properties:
         applicationId:
           type: string
-        timeSlotId:
+        centerId:
           type: string
         appointmentType:
           type: string
-          enum: [vision_test, theory_test]
+        appointmentDate:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
         notes:
           type: string
-      required: [applicationId, timeSlotId, appointmentType]
-
-    CancelAppointmentBody:
-      type: object
-      properties:
-        cancelReason:
-          type: string
-      required: [cancelReason]
+      required: [applicationId, centerId, appointmentType, appointmentDate, startTime, endTime]
 
     Appointment:
       type: object
@@ -1141,108 +1288,305 @@ components:
           type: string
         applicationId:
           type: string
-        citizenId:
+        userId:
           type: string
-        timeSlotId:
+        centerId:
           type: string
+          nullable: true
         appointmentType:
           type: string
+        appointmentDate:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        queueNumber:
+          type: integer
+          nullable: true
         status:
           type: string
-          enum: [scheduled, confirmed, completed, cancelled, no_show]
+          enum: [BOOKED, CHECKED_IN, COMPLETED, CANCELLED, NO_SHOW, FAILED, PASSED]
         notes:
           type: string
           nullable: true
-        cancelReason:
-          type: string
+        center:
+          $ref: "#/components/schemas/Center"
           nullable: true
-        cancelledAt:
-          type: string
-          nullable: true
-        timeSlot:
-          $ref: "#/components/schemas/TimeSlot"
         createdAt:
           type: string
-        updatedAt:
-          type: string
-      required:
-        - id
-        - applicationId
-        - citizenId
-        - timeSlotId
-        - appointmentType
-        - status
-        - createdAt
-        - updatedAt
+      required: [id, applicationId, userId, appointmentType, appointmentDate, startTime, endTime, status, createdAt]
 
-    # ─── TEST RESULTS ─────────────────────────────────────────────────────────
+    AppointmentWithUser:
+      allOf:
+        - $ref: "#/components/schemas/Appointment"
+        - type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/UserWithProfile"
 
-    RecordTestResultBody:
-      type: object
-      properties:
-        applicationId:
-          type: string
-        appointmentId:
-          type: string
-        testType:
-          type: string
-          enum: [vision, theory]
-        outcome:
-          type: string
-          enum: [pass, fail, absent]
-        score:
-          type: integer
-          nullable: true
-        passingScore:
-          type: integer
-          nullable: true
-        notes:
-          type: string
-          nullable: true
-      required: [applicationId, appointmentId, testType, outcome]
-
-    TestResult:
+    # TRAINING
+    TrainingRecord:
       type: object
       properties:
         id:
           type: string
         applicationId:
           type: string
-        appointmentId:
+        centerId:
           type: string
-        citizenId:
-          type: string
-        testType:
-          type: string
-          enum: [vision, theory]
-        outcome:
-          type: string
-          enum: [pass, fail, absent]
-        score:
-          type: integer
           nullable: true
-        passingScore:
+        theoreticalLessonsRequired:
           type: integer
+        practicalLessonsRequired:
+          type: integer
+        theoreticalLessonsCompleted:
+          type: integer
+        practicalLessonsCompleted:
+          type: integer
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED]
+        startedAt:
+          type: string
           nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        instructorName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        center:
+          $ref: "#/components/schemas/Center"
+          nullable: true
+      required: [id, applicationId, theoreticalLessonsRequired, practicalLessonsRequired, theoreticalLessonsCompleted, practicalLessonsCompleted, status]
+
+    UpdateTrainingBody:
+      type: object
+      properties:
+        theoreticalLessonsCompleted:
+          type: integer
+        practicalLessonsCompleted:
+          type: integer
+        status:
+          type: string
+        instructorName:
+          type: string
+        notes:
+          type: string
+
+    # MEDICAL
+    MedicalTest:
+      type: object
+      properties:
+        id:
+          type: string
+        applicationId:
+          type: string
+        centerId:
+          type: string
+          nullable: true
+        officerId:
+          type: string
+          nullable: true
+        result:
+          type: string
+          enum: [PASS_NO_GLASSES, PASS_WITH_GLASSES, FAILED_NOT_ALLOWED, NEEDS_RECHECK]
+        leftEyeScore:
+          type: string
+          nullable: true
+        rightEyeScore:
+          type: string
+          nullable: true
+        requiresGlasses:
+          type: boolean
+        isAllowedToDrive:
+          type: boolean
         notes:
           type: string
           nullable: true
         testedAt:
           type: string
+      required: [id, applicationId, result, requiresGlasses, isAllowedToDrive, testedAt]
+
+    RecordMedicalTestBody:
+      type: object
+      properties:
+        applicationId:
+          type: string
+        result:
+          type: string
+          enum: [PASS_NO_GLASSES, PASS_WITH_GLASSES, FAILED_NOT_ALLOWED, NEEDS_RECHECK]
+        leftEyeScore:
+          type: string
+        rightEyeScore:
+          type: string
+        requiresGlasses:
+          type: boolean
+        isAllowedToDrive:
+          type: boolean
+        notes:
+          type: string
+      required: [applicationId, result, requiresGlasses, isAllowedToDrive]
+
+    # EXAMS
+    Exam:
+      type: object
+      properties:
+        id:
+          type: string
+        applicationId:
+          type: string
+        centerId:
+          type: string
+          nullable: true
+        officerId:
+          type: string
+          nullable: true
+        examType:
+          type: string
+          enum: [THEORY, PRACTICAL]
+        score:
+          type: string
+          nullable: true
+        maxScore:
+          type: string
+          nullable: true
+        result:
+          type: string
+          enum: [PASSED, FAILED, ABSENT]
+        attemptNumber:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        examDate:
+          type: string
+      required: [id, applicationId, examType, result, attemptNumber, examDate]
+
+    RecordExamBody:
+      type: object
+      properties:
+        applicationId:
+          type: string
+        examType:
+          type: string
+          enum: [THEORY, PRACTICAL]
+        score:
+          type: number
+        maxScore:
+          type: number
+        result:
+          type: string
+          enum: [PASSED, FAILED, ABSENT]
+        notes:
+          type: string
+      required: [applicationId, examType, result]
+
+    # LICENSES
+    DrivingLicense:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        applicationId:
+          type: string
+          nullable: true
+        licenseNumber:
+          type: string
+        nationalId:
+          type: string
+        fullNameAr:
+          type: string
+          nullable: true
+        fullNameEn:
+          type: string
+          nullable: true
+        licenseCategoryId:
+          type: string
+          nullable: true
+        issueDate:
+          type: string
+        expiryDate:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, EXPIRED, SUSPENDED, CANCELLED, RENEWED]
+        photoUrl:
+          type: string
+          nullable: true
+        qrCodeUrl:
+          type: string
+          nullable: true
+        licenseCategory:
+          $ref: "#/components/schemas/LicenseCategory"
+          nullable: true
         createdAt:
           type: string
-      required:
-        - id
-        - applicationId
-        - appointmentId
-        - citizenId
-        - testType
-        - outcome
-        - testedAt
-        - createdAt
+      required: [id, userId, licenseNumber, nationalId, issueDate, expiryDate, status, createdAt]
 
-    # ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+    # VEHICLES
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: string
+        ownerUserId:
+          type: string
+        plateNumber:
+          type: string
+        registrationNumber:
+          type: string
+          nullable: true
+        vehicleType:
+          type: string
+          nullable: true
+        brand:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        manufactureYear:
+          type: integer
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        currentLicenseExpiry:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, ownerUserId, plateNumber, createdAt]
 
+    AddVehicleBody:
+      type: object
+      properties:
+        plateNumber:
+          type: string
+        registrationNumber:
+          type: string
+        vehicleType:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        manufactureYear:
+          type: integer
+        color:
+          type: string
+        currentLicenseExpiry:
+          type: string
+      required: [plateNumber]
+
+    # NOTIFICATIONS
     Notification:
       type: object
       properties:
@@ -1250,42 +1594,19 @@ components:
           type: string
         userId:
           type: string
+        title:
+          type: string
+        message:
+          type: string
         type:
           type: string
-        titleAr:
-          type: string
-        titleEn:
-          type: string
-        bodyAr:
-          type: string
-        bodyEn:
-          type: string
-        relatedEntityId:
-          type: string
-          nullable: true
-        relatedEntityType:
-          type: string
-          nullable: true
         isRead:
           type: boolean
-        readAt:
-          type: string
-          nullable: true
         createdAt:
           type: string
-      required:
-        - id
-        - userId
-        - type
-        - titleAr
-        - titleEn
-        - bodyAr
-        - bodyEn
-        - isRead
-        - createdAt
+      required: [id, userId, title, message, type, isRead, createdAt]
 
-    # ─── DASHBOARD ────────────────────────────────────────────────────────────
-
+    # DASHBOARD
     DashboardSummary:
       type: object
       properties:
@@ -1300,18 +1621,43 @@ components:
             $ref: "#/components/schemas/Appointment"
         unreadNotifications:
           type: integer
-        recentActivity:
+        myLicense:
+          $ref: "#/components/schemas/DrivingLicense"
+          nullable: true
+        profileCompletionPercent:
+          type: integer
+      required: [totalApplications, upcomingAppointments, unreadNotifications, profileCompletionPercent]
+
+    # OFFICER
+    OfficerDashboard:
+      type: object
+      properties:
+        center:
+          $ref: "#/components/schemas/Center"
+          nullable: true
+        todayAppointments:
+          type: integer
+        pendingAppointments:
+          type: integer
+        completedToday:
+          type: integer
+        recentAppointments:
           type: array
           items:
-            $ref: "#/components/schemas/ActivityItem"
-      required:
-        - totalApplications
-        - upcomingAppointments
-        - unreadNotifications
-        - recentActivity
+            $ref: "#/components/schemas/AppointmentWithUser"
+      required: [todayAppointments, pendingAppointments, completedToday, recentAppointments]
 
-    # ─── ADMIN ────────────────────────────────────────────────────────────────
+    UpdateAppointmentStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [CHECKED_IN, COMPLETED, NO_SHOW, FAILED, PASSED]
+        notes:
+          type: string
+      required: [status]
 
+    # ADMIN
     AdminStats:
       type: object
       properties:
@@ -1321,8 +1667,6 @@ components:
           type: integer
         approvedToday:
           type: integer
-        rejectedToday:
-          type: integer
         totalCitizens:
           type: integer
         totalCenters:
@@ -1330,49 +1674,37 @@ components:
         applicationsByStatus:
           type: array
           items:
-            $ref: "#/components/schemas/StatusCount"
-        applicationsByLicenseType:
+            $ref: "#/components/schemas/CountByKey"
+        applicationsByGovernorate:
           type: array
           items:
-            $ref: "#/components/schemas/LicenseTypeCount"
-        appointmentsToday:
+            $ref: "#/components/schemas/CountByKey"
+        passedExamsCount:
           type: integer
-      required:
-        - totalApplications
-        - pendingReview
-        - approvedToday
-        - rejectedToday
-        - totalCitizens
-        - totalCenters
-        - applicationsByStatus
-        - applicationsByLicenseType
-        - appointmentsToday
+        failedExamsCount:
+          type: integer
+        pendingMedicalTests:
+          type: integer
+        licensesIssued:
+          type: integer
+      required: [totalApplications, pendingReview, approvedToday, totalCitizens, totalCenters, applicationsByStatus, applicationsByGovernorate, passedExamsCount, failedExamsCount, pendingMedicalTests, licensesIssued]
 
-    StatusCount:
+    CountByKey:
       type: object
       properties:
-        status:
+        key:
           type: string
         count:
           type: integer
-      required: [status, count]
+      required: [key, count]
 
-    LicenseTypeCount:
-      type: object
-      properties:
-        licenseType:
-          type: string
-        count:
-          type: integer
-      required: [licenseType, count]
-
-    AdminApplicationsResponse:
+    PaginatedApplications:
       type: object
       properties:
         applications:
           type: array
           items:
-            $ref: "#/components/schemas/ApplicationWithCitizen"
+            $ref: "#/components/schemas/ApplicationWithUser"
         total:
           type: integer
         page:
@@ -1381,35 +1713,31 @@ components:
           type: integer
       required: [applications, total, page, totalPages]
 
-    ApplicationWithCitizen:
+    ApplicationWithUser:
       allOf:
         - $ref: "#/components/schemas/Application"
         - type: object
           properties:
-            citizen:
-              $ref: "#/components/schemas/User"
+            user:
+              $ref: "#/components/schemas/UserWithProfile"
 
-    ReviewApplicationBody:
+    AdminReviewBody:
       type: object
       properties:
         status:
           type: string
-          enum: [documents_approved, documents_rejected, approved, rejected]
-        reviewNotes:
-          type: string
-          nullable: true
         rejectionReason:
           type: string
           nullable: true
       required: [status]
 
-    AdminUsersResponse:
+    PaginatedUsers:
       type: object
       properties:
         users:
           type: array
           items:
-            $ref: "#/components/schemas/User"
+            $ref: "#/components/schemas/UserWithProfile"
         total:
           type: integer
         page:
@@ -1427,13 +1755,10 @@ components:
           type: string
         description:
           type: string
-        entityId:
-          type: string
-          nullable: true
         entityType:
           type: string
           nullable: true
-        performedBy:
+        entityId:
           type: string
           nullable: true
         createdAt:

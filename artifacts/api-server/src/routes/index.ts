@@ -1,8 +1,40 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
+import profileRouter from "./profile";
+import servicesRouter from "./services";
+import centersRouter from "./centers";
+import applicationsRouter from "./applications";
+import documentsRouter from "./documents";
+import appointmentsRouter from "./appointments";
+import trainingRouter from "./training";
+import medicalRouter from "./medical";
+import examsRouter from "./exams";
+import licensesRouter from "./licenses";
+import vehiclesRouter from "./vehicles";
+import notificationsRouter from "./notifications";
+import dashboardRouter from "./dashboard";
+import officerRouter from "./officer";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
+router.use(profileRouter);
+router.use(servicesRouter);
+router.use(centersRouter);
+router.use(applicationsRouter);
+router.use(documentsRouter);
+router.use(appointmentsRouter);
+router.use(trainingRouter);
+router.use(medicalRouter);
+router.use(examsRouter);
+router.use(licensesRouter);
+router.use(vehiclesRouter);
+router.use(notificationsRouter);
+router.use(dashboardRouter);
+router.use(officerRouter);
+router.use(adminRouter);
 
 export default router;

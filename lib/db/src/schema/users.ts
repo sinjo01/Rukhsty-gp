@@ -3,28 +3,22 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const userRoleEnum = pgEnum("user_role", [
-  "citizen",
-  "traffic_admin",
-  "center_staff",
-  "medical_staff",
-  "super_admin",
+  "USER",
+  "ADMIN",
+  "TRAINING_CENTER_OFFICER",
+  "MEDICAL_CENTER_OFFICER",
+  "THEORY_EXAM_OFFICER",
+  "PRACTICAL_EXAM_OFFICER",
+  "DVLD_OFFICER",
 ]);
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: userRoleEnum("role").notNull().default("citizen"),
-  fullNameAr: text("full_name_ar").notNull(),
-  fullNameEn: text("full_name_en").notNull(),
-  nationalId: text("national_id").unique(),
-  phone: text("phone"),
-  dateOfBirth: text("date_of_birth"),
-  gender: text("gender"),
-  preferredLang: text("preferred_lang").notNull().default("ar"),
-  isActive: boolean("is_active").notNull().default(true),
+  role: userRoleEnum("role").notNull().default("USER"),
   isEmailVerified: boolean("is_email_verified").notNull().default(false),
-  firebaseToken: text("firebase_token"),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

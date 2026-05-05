@@ -1,0 +1,861 @@
+1. Project Idea
+
+Rukhsty is a modern Jordanian digital licensing platform where users can:
+
+Register/login.
+Complete their identity profile.
+Upload personal photo.
+Upload national ID front/back.
+Choose service:
+إصدار رخصة سواقة
+تجديد رخصة سواقة
+تجديد ترخيص مركبة
+Track the application step by step.
+Book training center.
+Book medical/eye exam.
+Book theoretical exam.
+Book practical exam.
+Receive digital Jordanian driving license.
+2. Main User Workflow
+Before Login
+
+Homepage:
+
+Hero section: “Your Jordanian licensing journey in one place”
+Public services preview
+Steps timeline
+Trusted by / reference section
+Login button
+Register button
+Language switch Arabic/English
+Public Security / DVLD visual identity placeholder
+Modern SaaS cards and animations
+Register
+
+User fills:
+
+First name
+Second name
+Third name
+Family name
+Age
+Email
+Password
+National ID
+Phone number
+Governorate
+Address
+Personal photo upload
+National ID front upload
+National ID back upload
+After Login
+
+User Dashboard:
+
+Welcome card
+Profile completion status
+Services list
+Current applications
+Step tracker
+Notifications
+Appointments
+Service: إصدار رخصة سواقة
+
+Flow:
+
+Select license category.
+Confirm personal info.
+Select governorate and residence area.
+Choose nearby driving training center.
+Book training queue/appointment.
+Training center marks training as completed.
+User books medical/eye test.
+Medical center officer updates result:
+PASS_NO_GLASSES
+PASS_WITH_GLASSES
+FAILED_NOT_ALLOWED
+If passed, user books theoretical exam.
+Exam center updates result.
+If passed, user books practical exam.
+Practical center updates result.
+If passed, system generates digital license.
+3. Application Status Flow
+DRAFT
+PROFILE_SUBMITTED
+DOCUMENTS_UPLOADED
+TRAINING_CENTER_SELECTED
+TRAINING_BOOKED
+TRAINING_IN_PROGRESS
+TRAINING_COMPLETED
+MEDICAL_BOOKED
+MEDICAL_PASSED
+MEDICAL_FAILED
+THEORY_BOOKED
+THEORY_PASSED
+THEORY_FAILED
+PRACTICAL_BOOKED
+PRACTICAL_PASSED
+PRACTICAL_FAILED
+LICENSE_ISSUED
+REJECTED
+CANCELLED
+4. Database Schema
+
+Use PostgreSQL.
+
+users
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'USER',
+    is_email_verified BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Roles:
+
+USER
+ADMIN
+TRAINING_CENTER_OFFICER
+MEDICAL_CENTER_OFFICER
+THEORY_EXAM_OFFICER
+PRACTICAL_EXAM_OFFICER
+DVLD_OFFICER
+user_profiles
+CREATE TABLE user_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+
+    first_name VARCHAR(100) NOT NULL,
+    second_name VARCHAR(100) NOT NULL,
+    third_name VARCHAR(100) NOT NULL,
+    family_name VARCHAR(100) NOT NULL,
+
+    age INT NOT NULL CHECK (age >= 16),
+    national_id VARCHAR(20) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+
+    governorate VARCHAR(100),
+    city VARCHAR(100),
+    area VARCHAR(100),
+    address TEXT,
+
+    personal_photo_url TEXT,
+    id_front_url TEXT,
+    id_back_url TEXT,
+
+    profile_status VARCHAR(50) DEFAULT 'INCOMPLETE',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+services
+CREATE TABLE services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255) NOT NULL,
+    code VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+Seed data:
+
+INSERT INTO services (name_ar, name_en, code, description)
+VALUES
+('إصدار رخصة سواقة', 'Issue Driving License', 'ISSUE_DRIVING_LICENSE', 'Apply for a new Jordanian driving license'),
+('تجديد رخصة سواقة', 'Renew Driving License', 'RENEW_DRIVING_LICENSE', 'Renew an existing Jordanian driving license'),
+('تجديد ترخيص مركبة', 'Renew Vehicle Registration', 'RENEW_VEHICLE_REGISTRATION', 'Renew vehicle registration license');
+license_categories
+CREATE TABLE license_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255) NOT NULL,
+    minimum_age INT DEFAULT 18,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+Seed example:
+
+INSERT INTO license_categories (code, name_ar, name_en, minimum_age)
+VALUES
+('CAT_1_MOTORCYCLE', 'فئة أولى - دراجة نارية', 'Category 1 - Motorcycle', 18),
+('CAT_2_SMALL_VEHICLE', 'فئة ثانية', 'Category 2', 18),
+('CAT_3_PRIVATE_CAR', 'فئة ثالثة - خصوصي', 'Category 3 - Private Car', 18),
+('CAT_4_PUBLIC', 'فئة رابعة - عمومي', 'Category 4 - Public Vehicle', 21),
+('CAT_5_HEAVY', 'فئة خامسة - شحن/ثقيل', 'Category 5 - Heavy Vehicle', 21),
+('CAT_6_BUS', 'فئة سادسة - حافلات', 'Category 6 - Bus', 21);
+applications
+CREATE TABLE applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    service_id UUID REFERENCES services(id),
+    license_category_id UUID REFERENCES license_categories(id),
+
+    application_number VARCHAR(50) UNIQUE NOT NULL,
+
+    status VARCHAR(100) DEFAULT 'DRAFT',
+    current_step VARCHAR(100) DEFAULT 'PROFILE_REVIEW',
+
+    governorate VARCHAR(100),
+    residence_area VARCHAR(100),
+
+    submitted_at TIMESTAMP,
+    completed_at TIMESTAMP,
+
+    rejection_reason TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+application_steps
+CREATE TABLE application_steps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+
+    step_key VARCHAR(100) NOT NULL,
+    step_name_ar VARCHAR(255) NOT NULL,
+    step_name_en VARCHAR(255) NOT NULL,
+
+    status VARCHAR(50) DEFAULT 'PENDING',
+    order_number INT NOT NULL,
+
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+
+    notes TEXT
+);
+
+Step statuses:
+
+PENDING
+ACTIVE
+COMPLETED
+FAILED
+SKIPPED
+documents
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+
+    document_type VARCHAR(100) NOT NULL,
+    file_url TEXT NOT NULL,
+    file_name VARCHAR(255),
+    mime_type VARCHAR(100),
+
+    verification_status VARCHAR(50) DEFAULT 'PENDING',
+    verified_by UUID REFERENCES users(id),
+    verified_at TIMESTAMP,
+
+    rejection_reason TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Document types:
+
+PERSONAL_PHOTO
+NATIONAL_ID_FRONT
+NATIONAL_ID_BACK
+OLD_DRIVING_LICENSE
+VEHICLE_REGISTRATION
+TRAINING_CERTIFICATE
+MEDICAL_REPORT
+THEORY_EXAM_RESULT
+PRACTICAL_EXAM_RESULT
+centers
+CREATE TABLE centers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    center_type VARCHAR(100) NOT NULL,
+
+    name_ar VARCHAR(255) NOT NULL,
+    name_en VARCHAR(255),
+
+    governorate VARCHAR(100) NOT NULL,
+    city VARCHAR(100),
+    area VARCHAR(100),
+    address TEXT,
+
+    latitude DECIMAL(10, 7),
+    longitude DECIMAL(10, 7),
+
+    phone VARCHAR(20),
+    email VARCHAR(255),
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Center types:
+
+TRAINING_CENTER
+MEDICAL_CENTER
+THEORY_EXAM_CENTER
+PRACTICAL_EXAM_CENTER
+DVLD_CENTER
+center_officers
+CREATE TABLE center_officers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    center_id UUID REFERENCES centers(id) ON DELETE CASCADE,
+
+    position_title VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+appointments
+CREATE TABLE appointments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    center_id UUID REFERENCES centers(id),
+
+    appointment_type VARCHAR(100) NOT NULL,
+
+    appointment_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+
+    queue_number INT,
+
+    status VARCHAR(50) DEFAULT 'BOOKED',
+
+    notes TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Appointment types:
+
+TRAINING
+MEDICAL_EYE_TEST
+THEORY_EXAM
+PRACTICAL_EXAM
+LICENSE_PICKUP
+
+Appointment status:
+
+BOOKED
+CHECKED_IN
+COMPLETED
+CANCELLED
+NO_SHOW
+FAILED
+PASSED
+training_records
+CREATE TABLE training_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    center_id UUID REFERENCES centers(id),
+
+    theoretical_lessons_required INT DEFAULT 20,
+    practical_lessons_required INT DEFAULT 40,
+
+    theoretical_lessons_completed INT DEFAULT 0,
+    practical_lessons_completed INT DEFAULT 0,
+
+    status VARCHAR(50) DEFAULT 'NOT_STARTED',
+
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+
+    instructor_name VARCHAR(255),
+    notes TEXT
+);
+medical_tests
+CREATE TABLE medical_tests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    center_id UUID REFERENCES centers(id),
+    officer_id UUID REFERENCES users(id),
+
+    result VARCHAR(100) NOT NULL,
+
+    left_eye_score VARCHAR(50),
+    right_eye_score VARCHAR(50),
+
+    requires_glasses BOOLEAN DEFAULT FALSE,
+    is_allowed_to_drive BOOLEAN DEFAULT TRUE,
+
+    notes TEXT,
+
+    tested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Medical results:
+
+PASS_NO_GLASSES
+PASS_WITH_GLASSES
+FAILED_NOT_ALLOWED
+NEEDS_RECHECK
+exams
+CREATE TABLE exams (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    center_id UUID REFERENCES centers(id),
+    officer_id UUID REFERENCES users(id),
+
+    exam_type VARCHAR(50) NOT NULL,
+
+    score DECIMAL(5,2),
+    max_score DECIMAL(5,2),
+    result VARCHAR(50) NOT NULL,
+
+    attempt_number INT DEFAULT 1,
+
+    notes TEXT,
+
+    exam_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Exam types:
+
+THEORY
+PRACTICAL
+
+Exam result:
+
+PASSED
+FAILED
+ABSENT
+driving_licenses
+CREATE TABLE driving_licenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    application_id UUID REFERENCES applications(id),
+
+    license_number VARCHAR(50) UNIQUE NOT NULL,
+    national_id VARCHAR(20) NOT NULL,
+
+    full_name_ar VARCHAR(255),
+    full_name_en VARCHAR(255),
+
+    license_category_id UUID REFERENCES license_categories(id),
+
+    issue_date DATE NOT NULL,
+    expiry_date DATE NOT NULL,
+
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+
+    photo_url TEXT,
+
+    qr_code_url TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+License status:
+
+ACTIVE
+EXPIRED
+SUSPENDED
+CANCELLED
+RENEWED
+vehicles
+CREATE TABLE vehicles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    owner_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+
+    plate_number VARCHAR(50) UNIQUE NOT NULL,
+    registration_number VARCHAR(100),
+
+    vehicle_type VARCHAR(100),
+    brand VARCHAR(100),
+    model VARCHAR(100),
+    manufacture_year INT,
+    color VARCHAR(50),
+
+    current_license_expiry DATE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+vehicle_registration_renewals
+CREATE TABLE vehicle_registration_renewals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    vehicle_id UUID REFERENCES vehicles(id),
+
+    old_expiry_date DATE,
+    new_expiry_date DATE,
+
+    inspection_required BOOLEAN DEFAULT TRUE,
+    inspection_status VARCHAR(50) DEFAULT 'PENDING',
+
+    insurance_status VARCHAR(50) DEFAULT 'PENDING',
+    violations_status VARCHAR(50) DEFAULT 'PENDING',
+
+    payment_status VARCHAR(50) DEFAULT 'UNPAID',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+payments
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(10) DEFAULT 'JOD',
+
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(50) DEFAULT 'PENDING',
+
+    transaction_reference VARCHAR(255),
+
+    paid_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+notifications
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+
+    type VARCHAR(50) DEFAULT 'INFO',
+    is_read BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+audit_logs
+CREATE TABLE audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    actor_user_id UUID REFERENCES users(id),
+    action VARCHAR(255) NOT NULL,
+    entity_type VARCHAR(100),
+    entity_id UUID,
+
+    old_value JSONB,
+    new_value JSONB,
+
+    ip_address VARCHAR(100),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+5. Main Pages
+Public Pages
+/
+ /login
+ /register
+ /services
+ /about
+ /contact
+User Pages
+/dashboard
+/profile
+/services
+/services/issue-driving-license
+/services/renew-driving-license
+/services/renew-vehicle-registration
+/applications/:id
+/appointments
+/license-card
+/notifications
+Officer Pages
+/officer/dashboard
+/officer/applications
+/officer/applications/:id
+/officer/appointments
+/officer/results
+Admin Pages
+/admin/dashboard
+/admin/users
+/admin/centers
+/admin/services
+/admin/license-categories
+/admin/applications
+/admin/reports
+6. Replit Master Prompt
+
+انسخ هذا وحطه في Replit Agent:
+
+Build a full-stack modern SaaS web application called "Rukhsty | رخصتي".
+
+The app is a Jordanian digital driving licensing platform inspired by the official Jordan DVLD/Public Security licensing workflow.
+
+Tech stack:
+- Next.js 14 or React + Vite
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+- PostgreSQL
+- Prisma ORM
+- JWT authentication
+- Role-based access control
+- File upload support
+- Arabic/English support
+- Responsive design
+- Modern SaaS UI
+
+Design requirements:
+- Premium government SaaS look
+- Dark navy, royal blue, white, and subtle green accents
+- Glassmorphism cards
+- Smooth animations
+- Step tracker component
+- Dashboard analytics cards
+- Clean sidebar navigation
+- Arabic RTL support
+- Logo should look like a modern ID card with a shield/check icon and the text "Rukhsty | رخصتي"
+- Add a placeholder official government/public security emblem area in the header with disclaimer "For demo only"
+
+Public homepage:
+- Hero section with title: "رخصتك أسهل، أسرع، وأوضح"
+- Subtitle: "منصة رقمية لإدارة طلبات رخص القيادة وتجديد الرخص وترخيص المركبات"
+- Login and Register buttons
+- Services preview cards:
+  1. إصدار رخصة سواقة
+  2. تجديد رخصة سواقة
+  3. تجديد ترخيص مركبة
+- Animated process timeline:
+  Register → Upload Documents → Training → Medical Test → Theory Exam → Practical Exam → License Issued
+- Reference section mentioning DVLD/Public Security references without claiming official affiliation
+
+Authentication:
+- Register page fields:
+  firstName
+  secondName
+  thirdName
+  familyName
+  age
+  email
+  password
+  confirmPassword
+  nationalId
+  phone
+  governorate
+  city
+  area
+  address
+  personal photo upload
+  national ID front upload
+  national ID back upload
+- Login page
+- JWT auth
+- Password hashing
+
+Roles:
+USER
+ADMIN
+TRAINING_CENTER_OFFICER
+MEDICAL_CENTER_OFFICER
+THEORY_EXAM_OFFICER
+PRACTICAL_EXAM_OFFICER
+DVLD_OFFICER
+
+User dashboard:
+- Welcome card
+- Profile completion progress
+- Current application status
+- Service cards
+- Upcoming appointments
+- Notifications
+- Step tracker
+
+Services:
+1. Issue Driving License
+2. Renew Driving License
+3. Renew Vehicle Registration
+
+Issue Driving License workflow:
+- User chooses license category from Jordanian-like categories:
+  Category 1 Motorcycle
+  Category 2
+  Category 3 Private Car
+  Category 4 Public Vehicle
+  Category 5 Heavy Vehicle
+  Category 6 Bus
+- System displays user info from profile
+- User chooses governorate and residence area
+- User selects nearby training center
+- User books training appointment / queue
+- Training center officer updates training status and completed lessons
+- After training completed, user books medical/eye test
+- Medical officer records result:
+  PASS_NO_GLASSES
+  PASS_WITH_GLASSES
+  FAILED_NOT_ALLOWED
+  NEEDS_RECHECK
+- If medical passed, user books theory exam
+- Theory officer records PASSED/FAILED and score
+- If theory passed, user books practical exam
+- Practical officer records PASSED/FAILED
+- If practical passed, system generates digital license card with:
+  license number
+  full name
+  national id
+  photo
+  license category
+  issue date
+  expiry date
+  QR code placeholder
+
+Renew Driving License workflow:
+- User selects old license
+- Uploads old license if needed
+- Confirms personal info
+- Books medical test if required
+- Checks violations/payment mock
+- Pays mock fees
+- Receives renewed license
+
+Renew Vehicle Registration workflow:
+- User enters vehicle plate number
+- Vehicle info page
+- Checks inspection, insurance, violations as mock statuses
+- Pays mock fees
+- Receives renewed vehicle registration status
+
+Database:
+Use PostgreSQL and Prisma.
+Create models for:
+User
+UserProfile
+Service
+LicenseCategory
+Application
+ApplicationStep
+Document
+Center
+CenterOfficer
+Appointment
+TrainingRecord
+MedicalTest
+Exam
+DrivingLicense
+Vehicle
+VehicleRegistrationRenewal
+Payment
+Notification
+AuditLog
+
+Important:
+- Create seed data for Jordan governorates:
+  Amman, Irbid, Zarqa, Balqa, Madaba, Karak, Tafileh, Ma'an, Aqaba, Jerash, Ajloun, Mafraq
+- Create sample centers:
+  Training centers in Amman, Irbid, Zarqa
+  Medical centers in Amman, Irbid, Zarqa
+  Theory exam centers
+  Practical exam centers
+  DVLD centers
+- Add demo admin account:
+  admin@rukhsty.jo / Admin123!
+- Add demo officer accounts
+- Add demo user account:
+  user@rukhsty.jo / User123!
+
+UI components:
+- AppShell
+- Sidebar
+- Navbar
+- ServiceCard
+- StepTracker
+- ApplicationStatusBadge
+- AppointmentCalendar
+- FileUploadCard
+- LicenseCard
+- NotificationDropdown
+- AdminDataTable
+- OfficerReviewPanel
+
+Validation:
+- National ID required
+- Email unique
+- Age minimum based on license category
+- Required documents must be uploaded before submission
+- Cannot book medical before training completed
+- Cannot book theory before medical passed
+- Cannot book practical before theory passed
+- Cannot issue license before practical passed
+
+Animations:
+- Framer Motion page transitions
+- Animated cards
+- Step tracker progress animation
+- Smooth hover effects
+
+Security:
+- Protect dashboard routes
+- Role-based access
+- Do not allow users to update officer-only results
+- Store uploaded file URLs only
+- Use audit logs for officer/admin actions
+
+Deliver:
+- Complete project structure
+- Database schema
+- Prisma migrations
+- Seed file
+- API routes
+- Frontend pages
+- Reusable components
+- Beautiful polished UI
+- Working demo flow from registration to digital license issuance
+7. Logo Prompt
+
+Use this with any AI image/logo generator:
+
+Create a modern SaaS logo for a Jordanian digital licensing platform called "Rukhsty | رخصتي". 
+The logo should look like a smart national ID card combined with a shield and checkmark. 
+Style: premium, clean, government-tech, trustworthy, modern. 
+Colors: dark navy, royal blue, white, subtle emerald green. 
+Arabic and English wordmark: "Rukhsty | رخصتي". 
+Minimal, vector style, suitable for web app navbar, mobile icon, and dashboard.
+Do not copy any official government logo.
+8. Best App Name / Slogan
+Rukhsty | رخصتي
+رخصتك أسهل، أسرع، وأوضح
+Your license journey, simplified.
+9. Best Extra Features to Win
+
+Add these:
+
+AI Assistant:
+- Helps user understand next step.
+- Explains why application is stuck.
+- Answers service questions.
+
+Smart Step Tracker:
+- Shows completed/current/locked steps.
+
+QR Digital License:
+- QR opens verification page.
+
+Officer Dashboard:
+- Each center sees only its assigned requests.
+
+Admin Analytics:
+- Total applications
+- Passed exams
+- Failed exams
+- Pending medical tests
+- Most requested service
+- Applications by governorate
+10. Important Note for Accuracy
+
+For real deployment, exact Jordanian license categories, fees, medical standards, and official logos must be verified directly from DVLD/Public Security before launch. For your project/demo, this schema and workflow are strong, professional, and enough to build a full working prototype.
