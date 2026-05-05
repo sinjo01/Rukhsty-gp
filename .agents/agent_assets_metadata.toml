@@ -6,3 +6,9 @@ id = "LvzKXQWzcQ9mZtTCfJk49"
 uri = "file://db_export/rukhsty_database.tar.gz"
 type = "unspecified"
 title = "Rukhsty Database Export (18 tables)"
+
+[[outputs]]
+id = "b0OVgoAD5nm1OMX4YF9T1"
+uri = "file://db_export/use_case_diagram.svg"
+type = "image"
+title = "Rukhsty — Use Case Diagram (Functional Requirements)"
