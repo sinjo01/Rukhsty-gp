@@ -10,7 +10,7 @@ import type { Request } from "express";
 
 const router = Router();
 
-router.get("/dashboard", requireAuth, async (req, res) => {
+router.get("/dashboard/summary", requireAuth, async (req, res) => {
   const { userId } = (req as Request & { user: JwtPayload }).user;
   const [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, userId)).limit(1);
   const apps = await db.select().from(applicationsTable).where(eq(applicationsTable.userId, userId));

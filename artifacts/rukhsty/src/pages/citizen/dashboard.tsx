@@ -1,3 +1,4 @@
+import React from "react";
 import { useGetDashboardSummary, getGetDashboardSummaryQueryKey, useListApplications, getListApplicationsQueryKey, useListNotifications, getListNotificationsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { Link } from "wouter";
@@ -98,12 +99,14 @@ export default function Dashboard() {
 
       {/* Stats */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Applications", value: summary?.totalApplications ?? 0, icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Appointments", value: summary?.upcomingAppointments ?? 0, icon: Calendar, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Notifications", value: summary?.unreadNotifications ?? 0, icon: Bell, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
-          { label: "License", value: summary?.myLicense ? "Active" : "None", icon: CreditCard, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30" },
-        ].map((stat, i) => (
+        {(
+          [
+            { label: "Applications", value: summary?.totalApplications ?? 0, icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
+            { label: "Appointments", value: summary?.upcomingAppointments ?? 0, icon: Calendar, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/30" },
+            { label: "Notifications", value: summary?.unreadNotifications ?? 0, icon: Bell, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
+            { label: "License", value: summary?.myLicense != null ? "Active" : "None", icon: CreditCard, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          ] as Array<{ label: string; value: React.ReactNode; icon: React.ComponentType<{ className?: string }>; color: string; bg: string }>
+        ).map((stat, i) => (
           <Card key={i} className="border-border">
             <CardContent className="p-4">
               <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center mb-3`}>

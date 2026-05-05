@@ -41,7 +41,7 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
 
   const handleLogout = async () => {
     try {
-      await logoutMutation.mutateAsync({});
+      await logoutMutation.mutateAsync();
     } catch (e) {
       console.error(e);
     } finally {

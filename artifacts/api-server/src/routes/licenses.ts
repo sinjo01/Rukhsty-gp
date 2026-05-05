@@ -7,7 +7,7 @@ import type { Request } from "express";
 
 const router = Router();
 
-router.get("/license", requireAuth, async (req, res) => {
+router.get("/licenses/my", requireAuth, async (req, res) => {
   const { userId } = (req as Request & { user: JwtPayload }).user;
   const [license] = await db.select().from(drivingLicensesTable).where(eq(drivingLicensesTable.userId, userId)).limit(1);
   if (!license) { res.status(404).json({ message: "No license found" }); return; }
