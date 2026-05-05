@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +23,15 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
+const DEMO_ACCOUNTS = [
+  { label: "Admin", email: "admin@rukhsty.jo", password: "Admin123!" },
+  { label: "User", email: "user@rukhsty.jo", password: "User123!" },
+  { label: "Training Officer", email: "training.officer@rukhsty.jo", password: "Officer123!" },
+  { label: "Medical Officer", email: "medical.officer@rukhsty.jo", password: "Officer123!" },
+  { label: "Theory Officer", email: "theory.officer@rukhsty.jo", password: "Officer123!" },
+  { label: "Practical Officer", email: "practical.officer@rukhsty.jo", password: "Officer123!" },
+];
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
@@ -38,11 +46,16 @@ export default function Login() {
     },
   });
 
+  const fillCredentials = (email: string, password: string) => {
+    form.setValue("email", email, { shouldValidate: true });
+    form.setValue("password", password, { shouldValidate: true });
+  };
+
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
       const response = await loginMutation.mutateAsync({ data: values });
       login(response.token, response.user);
-      
+
       toast({
         title: "Login successful",
         description: "Welcome back to Rukhsty.",
@@ -92,7 +105,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Email address</FormLabel>
                       <FormControl>
-                        <Input placeholder="name@example.com" type="email" {...field} />
+                        <Input placeholder="name@example.com" type="email" autoComplete="username" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -106,16 +119,16 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input placeholder="••••••••" type="password" {...field} />
+                        <Input placeholder="••••••••" type="password" autoComplete="current-password" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? "Signing in..." : "Sign in"}
@@ -130,13 +143,22 @@ export default function Login() {
                 Register here
               </Link>
             </div>
-            
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg border text-xs text-muted-foreground w-full">
-              <p className="font-medium mb-1">Demo Credentials:</p>
-              <ul className="space-y-1">
-                <li><strong>Admin:</strong> admin@rukhsty.jo / Admin123!</li>
-                <li><strong>User:</strong> user@rukhsty.jo / User123!</li>
-              </ul>
+
+            <div className="mt-2 p-3 bg-muted/50 rounded-lg border w-full">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Demo Accounts — click to fill:</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {DEMO_ACCOUNTS.map((acc) => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => fillCredentials(acc.email, acc.password)}
+                    className="text-left px-2 py-1.5 rounded-md bg-background hover:bg-primary/10 border border-border transition-colors text-xs"
+                  >
+                    <span className="font-medium text-foreground block">{acc.label}</span>
+                    <span className="text-muted-foreground truncate block">{acc.email}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </CardFooter>
         </Card>
