@@ -1,0 +1,11 @@
+id,center_type,name_ar,name_en,governorate,city,area,address,latitude,longitude,phone,email,is_active,created_at
+1a34cdb7-c2f6-4ca7-acf3-84a5df720f88,TRAINING,مركز تدريب عمان الأول,Amman Training Center 1,Amman,Amman,,شارع الجاردنز، عمان,,,+962-6-555-0101,,t,2026-05-05 16:16:09.566196
+51d57618-35be-415d-b6a7-b3ec77309815,TRAINING,مركز تدريب إربد,Irbid Training Center,Irbid,Irbid,,شارع الجامعة، إربد,,,+962-2-555-0201,,t,2026-05-05 16:16:09.566196
+9dee83a8-4057-401d-a9bd-1265b578ed9b,TRAINING,مركز تدريب الزرقاء,Zarqa Training Center,Zarqa,Zarqa,,شارع المدينة، الزرقاء,,,+962-5-555-0301,,t,2026-05-05 16:16:09.566196
+29453903-4785-4c44-a99f-7adfacb0aaa1,MEDICAL,مركز الفحص الطبي عمان,Amman Medical Center,Amman,Amman,,شارع الملكة نور، عمان,,,+962-6-555-0401,,t,2026-05-05 16:16:09.566196
+af081046-1db4-4f21-8838-70d3a54af567,MEDICAL,مركز الفحص الطبي إربد,Irbid Medical Center,Irbid,Irbid,,شارع الحسن، إربد,,,+962-2-555-0501,,t,2026-05-05 16:16:09.566196
+a976e813-9069-4a3c-8763-99a2addabc68,THEORY_EXAM,مركز الاختبار النظري عمان,Amman Theory Exam Center,Amman,Amman,,مجمع الدوار الأول، عمان,,,+962-6-555-0601,,t,2026-05-05 16:16:09.566196
+336add9c-6410-4f54-ae64-5d68dd599dd6,THEORY_EXAM,مركز الاختبار النظري الزرقاء,Zarqa Theory Exam Center,Zarqa,Zarqa,,شارع الأمير محمد، الزرقاء,,,+962-5-555-0701,,t,2026-05-05 16:16:09.566196
+c81c59ae-ca21-42df-bf39-d77bd26884e2,PRACTICAL_EXAM,مضمار الاختبار العملي عمان,Amman Practical Exam Track,Amman,Amman,,طريق المطار، عمان,,,+962-6-555-0801,,t,2026-05-05 16:16:09.566196
+d9e83440-c76f-42dc-82b5-6d64adcd7efa,PRACTICAL_EXAM,مضمار الاختبار العملي إربد,Irbid Practical Exam Track,Irbid,Irbid,,المنطقة الصناعية، إربد,,,+962-2-555-0901,,t,2026-05-05 16:16:09.566196
+692cbadb-75b2-4aa8-92c1-371f651cb0e0,DVLD,مديرية الترخيص والأمن عمان,DVLD Amman Office,Amman,Amman,,دوار الداخلية، عمان,,,+962-6-555-1001,,t,2026-05-05 16:16:09.566196

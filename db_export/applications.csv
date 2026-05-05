@@ -1,0 +1,2 @@
+id,user_id,service_id,license_category_id,application_number,status,current_step,governorate,residence_area,rejection_reason,submitted_at,completed_at,created_at,updated_at
+2c44c6b9-98fc-4339-97d3-1632b1cd1890,6168d2b2-dbac-4e84-91f3-bfee94702426,,d0a21a36-6deb-4400-99f6-d3304346ba9c,RU-1777997945425-966,TRAINING_CENTER_SELECTED,TRAINING,Amman,الشميساني,,,,2026-05-05 16:19:05.435555,2026-05-05 16:19:14.859

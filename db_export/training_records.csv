@@ -1,0 +1,2 @@
+id,application_id,center_id,theoretical_lessons_required,practical_lessons_required,theoretical_lessons_completed,practical_lessons_completed,status,started_at,completed_at,instructor_name,notes,created_at,updated_at
+6aec273d-e7a2-47df-b5f8-07a58474f946,2c44c6b9-98fc-4339-97d3-1632b1cd1890,1a34cdb7-c2f6-4ca7-acf3-84a5df720f88,20,40,0,0,NOT_STARTED,,,,,2026-05-05 16:19:14.855834,2026-05-05 16:19:14.855834

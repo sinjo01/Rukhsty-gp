@@ -1,0 +1,7 @@
+id,email,password_hash,role,is_email_verified,is_active,created_at,updated_at
+41ab7cd5-a6a7-4546-bd64-a6e9df18a90b,admin@rukhsty.jo,$2b$10$ljhALuykNbOOr10TOGS2J.Zi.cDyMwHg7ENx6sESp.90XMLh8pxYm,ADMIN,t,t,2026-05-05 16:16:09.664037,2026-05-05 16:16:09.664037
+6168d2b2-dbac-4e84-91f3-bfee94702426,user@rukhsty.jo,$2b$10$HeUvNR9JyAKfOP9OwvahGe9CzAPSLgLkXBdxLRSXzJx8YTarubzM2,USER,t,t,2026-05-05 16:16:09.764626,2026-05-05 16:16:09.764626
+008adc78-e948-4ecd-a482-5d9eb718442f,training.officer@rukhsty.jo,$2b$10$uSSf4wVEgabkobyJlQQ1vuF4mSe9aT6z2xdy5h/vS9hvJquJdWE9S,TRAINING_CENTER_OFFICER,t,t,2026-05-05 16:16:09.860039,2026-05-05 16:16:09.860039
+9adc311e-67ac-4cf9-ba9a-7ed370f0251b,medical.officer@rukhsty.jo,$2b$10$tcNqLTSD9D/vj706kUL7aOnivvCSThGbf25in1hDIakm0aR2xfw5.,MEDICAL_CENTER_OFFICER,t,t,2026-05-05 16:16:09.950017,2026-05-05 16:16:09.950017
+4358507a-7c02-4247-ae32-100f75d9fa96,theory.officer@rukhsty.jo,$2b$10$Yc8ZDMnkYtemocBMYq9fs.L4TjEIYwgpffnm171tRiad8k4jImDam,THEORY_EXAM_OFFICER,t,t,2026-05-05 16:16:10.038577,2026-05-05 16:16:10.038577
+f9f75e1a-4fa4-4c1a-8276-c1f71af0e693,practical.officer@rukhsty.jo,$2b$10$ApAIkCLShKCtuUses.zmguogX8kA6.HWP5P94VBqq71JUJrVjuSOG,PRACTICAL_EXAM_OFFICER,t,t,2026-05-05 16:16:10.130339,2026-05-05 16:16:10.130339

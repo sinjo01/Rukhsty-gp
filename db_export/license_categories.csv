@@ -1,0 +1,7 @@
+id,code,name_ar,name_en,minimum_age,description,is_active,created_at
+d0a21a36-6deb-4400-99f6-d3304346ba9c,CAT_1,الفئة الأولى,Category 1 - Motorcycles,18,Motorcycles and light motor vehicles,t,2026-05-05 16:16:09.560405
+4281a4fc-8d82-42da-a4b8-9a04445d7a31,CAT_2,الفئة الثانية,Category 2 - Light Vehicles,18,Cars and light vehicles up to 3.5 tons,t,2026-05-05 16:16:09.560405
+7a392f7e-6d16-4cfa-ac28-6300e0d6c66c,CAT_3,الفئة الثالثة,Category 3 - Heavy Vehicles,21,Trucks and heavy vehicles,t,2026-05-05 16:16:09.560405
+01aefdcc-60a7-4b74-995d-47c25d58ff0d,CAT_4,الفئة الرابعة,Category 4 - Buses,24,Public transport buses,t,2026-05-05 16:16:09.560405
+59cb82ee-8bc0-4efa-adad-fddcf265c7f5,CAT_5,الفئة الخامسة,Category 5 - Special Vehicles,21,Special purpose vehicles,t,2026-05-05 16:16:09.560405
+e2097196-57ab-4d8d-a73b-572f7de6a276,CAT_6,الفئة السادسة,Category 6 - Agricultural,18,Agricultural machinery,t,2026-05-05 16:16:09.560405

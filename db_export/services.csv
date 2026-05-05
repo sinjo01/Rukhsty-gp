@@ -1,0 +1,4 @@
+id,name_ar,name_en,code,description,is_active,created_at
+9508f701-4852-46a8-8769-f924e4f3998d,استخراج رخصة قيادة,Issue Driving License,ISSUE_DRIVING_LICENSE,Apply for a new driving license,t,2026-05-05 16:16:09.519373
+5bead43c-97e6-44a6-90f0-64ea9b1c2f5c,تجديد رخصة قيادة,Renew Driving License,RENEW_DRIVING_LICENSE,Renew an existing driving license,t,2026-05-05 16:16:09.519373
+8ffda580-bbce-4630-88a5-7504e551f4b5,تجديد تسجيل مركبة,Renew Vehicle Registration,RENEW_VEHICLE_REGISTRATION,Renew vehicle registration,t,2026-05-05 16:16:09.519373

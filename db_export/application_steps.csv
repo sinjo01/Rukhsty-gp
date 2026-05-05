@@ -1,0 +1,8 @@
+id,application_id,step_key,step_name_ar,step_name_en,status,order_number,started_at,completed_at,notes
+ba25f4cc-2c8e-4a69-838b-4f461b00a883,2c44c6b9-98fc-4339-97d3-1632b1cd1890,PROFILE_REVIEW,مراجعة البيانات الشخصية,Profile Review,ACTIVE,1,,,
+b2810eb7-d970-493b-bbe2-dc416844d0ef,2c44c6b9-98fc-4339-97d3-1632b1cd1890,MEDICAL_TEST,الفحص الطبي,Medical Test,PENDING,4,,,
+765025de-1c39-4cf4-865a-ef912839c866,2c44c6b9-98fc-4339-97d3-1632b1cd1890,THEORY_EXAM,الاختبار النظري,Theory Exam,PENDING,5,,,
+e8e497a3-c930-4c27-8f00-f7d42d706dca,2c44c6b9-98fc-4339-97d3-1632b1cd1890,PRACTICAL_EXAM,الاختبار العملي,Practical Exam,PENDING,6,,,
+71cc9a67-0b9e-434b-8429-881b09f6ac59,2c44c6b9-98fc-4339-97d3-1632b1cd1890,LICENSE_ISSUANCE,إصدار الرخصة,License Issuance,PENDING,7,,,
+c24988bb-9ed6-4a03-b947-9fb54ed4754f,2c44c6b9-98fc-4339-97d3-1632b1cd1890,TRAINING_CENTER_SELECTION,اختيار مركز التدريب,Training Center Selection,COMPLETED,2,,,
+482fa6f2-08a9-4c84-97eb-316ab89f8023,2c44c6b9-98fc-4339-97d3-1632b1cd1890,TRAINING,التدريب,Training,ACTIVE,3,,,

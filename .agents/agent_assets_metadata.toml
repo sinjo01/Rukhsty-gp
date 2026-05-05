@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "LvzKXQWzcQ9mZtTCfJk49"
+uri = "file://db_export/rukhsty_database.tar.gz"
+type = "unspecified"
+title = "Rukhsty Database Export (18 tables)"
