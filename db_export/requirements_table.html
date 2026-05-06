@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Rukhsty — Requirements Table</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
+  h1 { text-align: center; color: #fff; background: #1e3a5f; padding: 18px 24px; border-radius: 10px 10px 0 0; font-size: 22px; letter-spacing: 0.5px; }
+  .subtitle { text-align: center; background: #1e4d8c; color: #bfdbfe; font-size: 13px; padding: 8px; margin-bottom: 36px; border-radius: 0 0 10px 10px; }
+  h2 { font-size: 17px; font-weight: 700; margin: 28px 0 10px; padding-left: 12px; border-left: 5px solid; }
+  h2.fr { border-color: #2563eb; color: #1e3a5f; }
+  h2.nfr { border-color: #7c3aed; color: #4c1d95; }
+  table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 12px #0000001a; margin-bottom: 8px; }
+  thead tr { background: #1e3a5f; color: #fff; }
+  thead.nfr-head tr { background: #7c3aed; }
+  th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; letter-spacing: 0.4px; }
+  tbody tr { background: #fff; border-bottom: 1px solid #e2e8f0; }
+  tbody tr:nth-child(even) { background: #f1f5f9; }
+  tbody tr:hover { background: #e0f2fe; }
+  td { padding: 10px 14px; font-size: 13px; vertical-align: top; }
+  .id { font-weight: 700; white-space: nowrap; }
+  .fr-id { color: #1d4ed8; }
+  .nfr-id { color: #6d28d9; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-citizen  { background: #dbeafe; color: #1d4ed8; }
+  .badge-officer  { background: #dcfce7; color: #15803d; }
+  .badge-admin    { background: #ede9fe; color: #6d28d9; }
+  .badge-all      { background: #f1f5f9; color: #475569; }
+  .badge-perf     { background: #fef9c3; color: #854d0e; }
+  .badge-sec      { background: #fee2e2; color: #991b1b; }
+  .badge-usab     { background: #e0f2fe; color: #0369a1; }
+  .badge-avail    { background: #dcfce7; color: #166534; }
+  .badge-maint    { background: #f3e8ff; color: #7c3aed; }
+  .badge-scale    { background: #ffedd5; color: #9a3412; }
+  .badge-comp     { background: #fce7f3; color: #9d174d; }
+  .priority { font-weight: 600; }
+  .high { color: #dc2626; }
+  .medium { color: #d97706; }
+  .low { color: #2563eb; }
+  footer { text-align: center; margin-top: 32px; font-size: 12px; color: #94a3b8; }
+  @media print { body { padding: 12px; } }
+</style>
+</head>
+<body>
+
+<h1>Rukhsty | رخصتي — System Requirements</h1>
+<div class="subtitle">Digital Driving License Management Platform — Jordan</div>
+
+<!-- ═══════════════════ FUNCTIONAL REQUIREMENTS ═══════════════════ -->
+<h2 class="fr">Functional Requirements (FR)</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:70px">ID</th>
+      <th style="width:180px">Requirement</th>
+      <th>Description</th>
+      <th style="width:120px">Actor</th>
+      <th style="width:80px">Priority</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Auth -->
+    <tr>
+      <td class="id fr-id">FR-01</td>
+      <td>User Registration</td>
+      <td>Citizens must be able to register a new account by providing their email and password. The system verifies the email is unique before creating the account.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-02</td>
+      <td>User Login / Logout</td>
+      <td>All users (citizen, officer, admin) must be able to log in using email and password. The system issues a JWT token valid for 7 days. Users can log out at any time, clearing the session token.</td>
+      <td><span class="badge badge-all">All Roles</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-03</td>
+      <td>Role-Based Access Control</td>
+      <td>The system enforces role separation: USER, TRAINING_CENTER_OFFICER, MEDICAL_CENTER_OFFICER, THEORY_EXAM_OFFICER, PRACTICAL_EXAM_OFFICER, and ADMIN. Each role can only access its designated pages and API endpoints.</td>
+      <td><span class="badge badge-all">All Roles</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Profile -->
+    <tr>
+      <td class="id fr-id">FR-04</td>
+      <td>Complete Citizen Profile</td>
+      <td>Citizens must fill in their personal details (first, second, third, family name), national ID, phone, governorate, city, address, and upload a personal photo, ID front and back images before submitting a license application.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-05</td>
+      <td>View Profile Summary</td>
+      <td>Citizens can view their stored profile information and profile completion percentage from their dashboard.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Application -->
+    <tr>
+      <td class="id fr-id">FR-06</td>
+      <td>Apply for Driving License</td>
+      <td>Citizens can initiate a new driving license application by selecting a license service. The application moves through a defined status pipeline: DRAFT → PROFILE_SUBMITTED → TRAINING_CENTER_SELECTED → TRAINING_COMPLETED → LICENSE_ISSUED / REJECTED.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-07</td>
+      <td>Select Training Center</td>
+      <td>Citizens can browse available training centers and select one for their application. The system records the selected center and transitions the application status accordingly.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-08</td>
+      <td>Upload Documents</td>
+      <td>Citizens can upload required documents (personal photo, national ID front and back) during the profile completion step. The system stores document URLs and validates that required fields are present.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-09</td>
+      <td>Track Application Status</td>
+      <td>Citizens can view all their applications, their current status, and step-by-step progress through the licensing pipeline. Each application detail page shows full history and associated appointments.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Appointments -->
+    <tr>
+      <td class="id fr-id">FR-10</td>
+      <td>Book Appointment</td>
+      <td>Citizens can book appointments for each stage of the licensing process (training, medical, theory exam, practical exam). The system records the date, center, and type of appointment.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-11</td>
+      <td>View Upcoming Appointments</td>
+      <td>Citizens can view a list of all upcoming booked appointments with date, time, center name, and appointment type from their appointments page and dashboard summary.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Notifications -->
+    <tr>
+      <td class="id fr-id">FR-12</td>
+      <td>Receive Notifications</td>
+      <td>The system automatically creates in-app notifications for key events (application status changes, appointment confirmations, exam results). Notifications show a title, message, and timestamp.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-13</td>
+      <td>Mark Notifications as Read</td>
+      <td>Citizens can mark individual notifications as read or mark all notifications as read at once. The dashboard shows the count of unread notifications as a badge.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority low">Low</td>
+    </tr>
+    <!-- License -->
+    <tr>
+      <td class="id fr-id">FR-14</td>
+      <td>View Digital License Card</td>
+      <td>Once a driving license is issued, citizens can view a digital representation of their license card including license number, category, issue and expiry dates, and personal information.</td>
+      <td><span class="badge badge-citizen">Citizen</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Officer -->
+    <tr>
+      <td class="id fr-id">FR-15</td>
+      <td>Officer Dashboard</td>
+      <td>Officers see a dashboard summarising their assigned appointments count, today's schedule, and recent activity relevant to their role.</td>
+      <td><span class="badge badge-officer">Officer</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-16</td>
+      <td>View Assigned Appointments</td>
+      <td>Officers can view all appointments assigned to their center, filtered by status (BOOKED, COMPLETED, CANCELLED). Each entry shows the citizen name, appointment type, and date/time.</td>
+      <td><span class="badge badge-officer">Officer</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-17</td>
+      <td>Record Training Completion</td>
+      <td>Training center officers can mark a training appointment as completed, triggering an application status update to TRAINING_COMPLETED and creating a notification for the citizen.</td>
+      <td><span class="badge badge-officer">Officer</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-18</td>
+      <td>Record Exam / Medical Results</td>
+      <td>Medical, theory exam, and practical exam officers can record pass/fail results for each stage. A pass progresses the application; a fail can trigger rejection or re-scheduling.</td>
+      <td><span class="badge badge-officer">Officer</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Admin -->
+    <tr>
+      <td class="id fr-id">FR-19</td>
+      <td>Admin Dashboard &amp; Statistics</td>
+      <td>Admins see a high-level statistics page: total applications, pending reviews, issued licenses, active users, and recent system activity.</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-20</td>
+      <td>Manage All Applications</td>
+      <td>Admins can view all citizen applications across the system, filter by status, and drill down into individual application details.</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-21</td>
+      <td>Approve / Reject Applications</td>
+      <td>Admins can approve an application (advancing it toward license issuance) or reject it with a written reason. The decision is saved, the application status is updated, and the citizen receives a notification.</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-22</td>
+      <td>Issue Driving License</td>
+      <td>Admins can issue a digital driving license for an approved application. The system creates a license record with a unique number, license category, issue date, and 5-year expiry date.</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-23</td>
+      <td>Manage Users</td>
+      <td>Admins can view a list of all registered users, see their roles, registration date, and account status (active/inactive).</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-24</td>
+      <td>Manage Training Centers</td>
+      <td>Admins can view all registered training and examination centers, including their location (governorate, city), capacity, type, and assigned officers.</td>
+      <td><span class="badge badge-admin">Admin</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id fr-id">FR-25</td>
+      <td>Bilingual Interface (AR / EN)</td>
+      <td>The platform displays all UI text in both Arabic and English where applicable (headings, labels, placeholders). Arabic content is RTL-aware.</td>
+      <td><span class="badge badge-all">All Roles</span></td>
+      <td class="priority medium">Medium</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════ NON-FUNCTIONAL REQUIREMENTS ═══════════════════ -->
+<h2 class="nfr">Non-Functional Requirements (NFR)</h2>
+<table>
+  <thead class="nfr-head">
+    <tr>
+      <th style="width:70px">ID</th>
+      <th style="width:120px">Category</th>
+      <th style="width:180px">Requirement</th>
+      <th>Description</th>
+      <th style="width:80px">Priority</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Performance -->
+    <tr>
+      <td class="id nfr-id">NFR-01</td>
+      <td><span class="badge badge-perf">Performance</span></td>
+      <td>API Response Time</td>
+      <td>All API endpoints must respond within 500 ms under normal load. Database queries must use indexed columns to avoid full-table scans on frequently accessed tables (users, applications, appointments).</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-02</td>
+      <td><span class="badge badge-perf">Performance</span></td>
+      <td>Page Load Time</td>
+      <td>The frontend SPA must achieve an initial load time under 3 seconds on a standard broadband connection. Code-splitting and lazy-loading are applied per route to minimise bundle size.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Security -->
+    <tr>
+      <td class="id nfr-id">NFR-03</td>
+      <td><span class="badge badge-sec">Security</span></td>
+      <td>Authentication &amp; JWT</td>
+      <td>All protected endpoints require a valid JWT Bearer token signed with a secret key. Tokens expire after 7 days. Invalid or expired tokens return HTTP 401. Passwords are hashed using bcrypt (cost factor 10) and are never stored in plain text.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-04</td>
+      <td><span class="badge badge-sec">Security</span></td>
+      <td>Authorization &amp; Role Guards</td>
+      <td>Every API route enforces role-based middleware. Accessing a route outside a user's assigned role returns HTTP 403. The frontend additionally restricts navigation using per-route role checks in the AppShell component.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-05</td>
+      <td><span class="badge badge-sec">Security</span></td>
+      <td>Input Validation</td>
+      <td>All API request bodies are validated server-side using Zod schemas before processing. Invalid payloads return HTTP 400 with descriptive error messages. SQL injection is prevented by parameterised queries via Drizzle ORM.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-06</td>
+      <td><span class="badge badge-sec">Security</span></td>
+      <td>HTTPS &amp; Secure Transport</td>
+      <td>In production, all client-server communication is encrypted over HTTPS/TLS. The reverse proxy enforces mTLS for internal service-to-service routing. Sensitive credentials are stored as environment secrets, never hard-coded.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Usability -->
+    <tr>
+      <td class="id nfr-id">NFR-07</td>
+      <td><span class="badge badge-usab">Usability</span></td>
+      <td>Responsive Design</td>
+      <td>The platform is fully usable on desktop (1280 px+), tablet (768 px), and mobile (375 px) screen sizes. Tailwind CSS utility classes provide a fluid, adaptive layout across all breakpoints.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-08</td>
+      <td><span class="badge badge-usab">Usability</span></td>
+      <td>Dark / Light Mode</td>
+      <td>The interface supports both light and dark colour modes, toggled by the user. The selected preference is persisted via the ThemeProvider and applied globally across all pages.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-09</td>
+      <td><span class="badge badge-usab">Usability</span></td>
+      <td>Animated Transitions</td>
+      <td>Key page transitions and component state changes use Framer Motion animations (fade-in, slide-up) to provide smooth, professional UX without blocking user interaction.</td>
+      <td class="priority low">Low</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-10</td>
+      <td><span class="badge badge-usab">Usability</span></td>
+      <td>Error Feedback</td>
+      <td>The system provides clear, actionable error messages via toast notifications for every failed operation (login failure, form validation errors, API errors). Generic "something went wrong" messages are avoided.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Availability -->
+    <tr>
+      <td class="id nfr-id">NFR-11</td>
+      <td><span class="badge badge-avail">Availability</span></td>
+      <td>System Uptime</td>
+      <td>The deployed platform targets 99.5% monthly uptime. The Express API server is managed by a process supervisor and restarts automatically on crash. PostgreSQL data is persisted on a reliable managed database service.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-12</td>
+      <td><span class="badge badge-avail">Availability</span></td>
+      <td>Graceful Error Handling</td>
+      <td>Unhandled API errors return a structured JSON response (message, status code) instead of crashing the server. The frontend displays user-friendly fallback states (empty states, retry buttons) when data fails to load.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <!-- Maintainability -->
+    <tr>
+      <td class="id nfr-id">NFR-13</td>
+      <td><span class="badge badge-maint">Maintainability</span></td>
+      <td>Contract-First API</td>
+      <td>The API contract is defined in an OpenAPI 3.0 specification. Client hooks and Zod schemas are auto-generated via Orval codegen. Any API change requires updating the spec first, ensuring frontend and backend stay in sync.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-14</td>
+      <td><span class="badge badge-maint">Maintainability</span></td>
+      <td>TypeScript Strict Mode</td>
+      <td>The entire codebase (frontend, backend, shared libraries) is written in TypeScript with strict mode enabled. Zero TypeScript errors are permitted in CI. This reduces runtime bugs and improves refactoring safety.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-15</td>
+      <td><span class="badge badge-maint">Maintainability</span></td>
+      <td>Monorepo Structure</td>
+      <td>The project uses a pnpm workspace monorepo separating concerns: api-server, rukhsty web app, db schema lib, api-spec lib, and api-client-react lib. Shared code lives in libs to avoid duplication.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-16</td>
+      <td><span class="badge badge-maint">Maintainability</span></td>
+      <td>Structured Logging</td>
+      <td>The API server uses Pino for structured JSON logging. All requests are logged with method, URL, status code, and response time. Console.log is prohibited in server code.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Scalability -->
+    <tr>
+      <td class="id nfr-id">NFR-17</td>
+      <td><span class="badge badge-scale">Scalability</span></td>
+      <td>Stateless API Design</td>
+      <td>The API server is stateless — all session state is encoded in the JWT token. This allows horizontal scaling by running multiple API server instances behind a load balancer without sticky sessions.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-18</td>
+      <td><span class="badge badge-scale">Scalability</span></td>
+      <td>Database Indexing</td>
+      <td>Foreign key columns and frequently queried fields (userId, applicationId, status, email) are indexed in the PostgreSQL schema to maintain sub-100 ms query times as data volume grows.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+    <!-- Compliance -->
+    <tr>
+      <td class="id nfr-id">NFR-19</td>
+      <td><span class="badge badge-comp">Compliance</span></td>
+      <td>Data Privacy</td>
+      <td>Personal data (national ID, phone, photos) is accessible only to the authenticated citizen who owns it and authorized admin users. Officers can only see citizen data relevant to their assigned appointments.</td>
+      <td class="priority high">High</td>
+    </tr>
+    <tr>
+      <td class="id nfr-id">NFR-20</td>
+      <td><span class="badge badge-comp">Compliance</span></td>
+      <td>Audit Trail</td>
+      <td>All significant state changes (application status updates, license issuance, admin decisions) are recorded in the audit_logs table with the actor's user ID, action type, entity affected, and timestamp.</td>
+      <td class="priority medium">Medium</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer>Rukhsty | رخصتي &mdash; Digital Driving License Platform &mdash; Jordan &mdash; 2026</footer>
+</body>
+</html>

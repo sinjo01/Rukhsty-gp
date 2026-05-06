@@ -12,3 +12,15 @@ id = "b0OVgoAD5nm1OMX4YF9T1"
 uri = "file://db_export/use_case_diagram.svg"
 type = "image"
 title = "Rukhsty — Use Case Diagram (Functional Requirements)"
+
+[[outputs]]
+id = "V6FJ4g5vJH1kDQI5X7WfH"
+uri = "file://db_export/requirements.md"
+type = "text"
+title = "Requirements Table (FR & NFR) — Markdown"
+
+[[outputs]]
+id = "NSmfahqX-6wLaFPUHiH4r"
+uri = "file://db_export/requirements_table.tar.gz"
+type = "unspecified"
+title = "Requirements Table — HTML (full colour, printable)"
