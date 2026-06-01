@@ -1,9 +1,21 @@
-import { useGetApplication, getGetApplicationQueryKey } from "@workspace/api-client-react";
+import { useState } from "react";
+import {
+  useBookAppointment,
+  useGetApplication,
+  getGetApplicationQueryKey,
+  useListCenters,
+  getListCentersQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope } from "lucide-react";
 
@@ -32,9 +44,16 @@ function StepIcon({ status }: { status: string }) {
 }
 
 export default function ApplicationDetail({ params }: { params: { id: string } }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [selectedCenterId, setSelectedCenterId] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
   const { data: app, isLoading } = useGetApplication(params.id, {
     query: { queryKey: getGetApplicationQueryKey(params.id), enabled: !!params.id },
   });
+  const bookAppointment = useBookAppointment();
 
   if (isLoading) {
     return (
@@ -57,6 +76,40 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
   const steps = detail.steps ?? [];
   const appointments = detail.appointments ?? [];
   const exams = detail.exams ?? [];
+  const booking = getBookingConfig(detail.currentStep);
+  const { data: centers } = useListCenters(
+    { centerType: booking?.centerType, governorate: detail.governorate ?? undefined },
+    { query: { queryKey: getListCentersQueryKey({ centerType: booking?.centerType, governorate: detail.governorate ?? undefined }), enabled: !!booking } }
+  );
+
+  const handleBookAppointment = async () => {
+    if (!booking || !selectedCenterId || !appointmentDate || !startTime) {
+      toast({ variant: "destructive", title: "Please select a center, date, and time" });
+      return;
+    }
+
+    const [hour, minute] = startTime.split(":").map(Number);
+    const endTime = `${String(Math.min((hour || 9) + 1, 23)).padStart(2, "0")}:${String(minute || 0).padStart(2, "0")}`;
+
+    try {
+      await bookAppointment.mutateAsync({
+        data: {
+          applicationId: detail.id,
+          centerId: selectedCenterId,
+          appointmentType: booking.appointmentType,
+          appointmentDate,
+          startTime,
+          endTime,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetApplicationQueryKey(params.id) });
+      toast({ title: "Appointment booked", description: "Your booking was saved successfully." });
+      setBookingOpen(false);
+      setSelectedCenterId("");
+    } catch (error) {
+      toast({ variant: "destructive", title: "Booking failed", description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -104,6 +157,27 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
           </CardContent>
         </Card>
       </motion.div>
+
+      {booking && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-medium text-sm">{booking.label}</p>
+              <p className="text-xs text-muted-foreground">Choose an authorized center and available time.</p>
+            </div>
+            <Button onClick={() => setBookingOpen(true)}>{booking.button}</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {detail.currentStep === "LICENSE_ISSUANCE" && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <p className="font-medium text-sm text-amber-900">Waiting for DVLD/Admin license issuance</p>
+            <p className="text-xs text-amber-800 mt-1">Your practical result is complete. An authorized officer must issue the digital license.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Training Record */}
       {detail.trainingRecord && (
@@ -226,6 +300,45 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
           </Card>
         </motion.div>
       )}
+
+      <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{booking?.button ?? "Book Appointment"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
+              <SelectTrigger><SelectValue placeholder="Select center" /></SelectTrigger>
+              <SelectContent>
+                {centers?.map((center: any) => (
+                  <SelectItem key={center.id} value={center.id}>{center.nameEn} - {center.governorate}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input type="date" value={appointmentDate} min={new Date().toISOString().split("T")[0]} onChange={(event) => setAppointmentDate(event.target.value)} />
+            <Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBookingOpen(false)}>Cancel</Button>
+            <Button onClick={handleBookAppointment} disabled={bookAppointment.isPending}>
+              {bookAppointment.isPending ? "Booking..." : "Confirm Booking"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function getBookingConfig(step?: string) {
+  switch (step) {
+    case "TRAINING":
+      return { button: "Book Training Appointment", label: "Training appointment", appointmentType: "TRAINING", centerType: "TRAINING" };
+    case "MEDICAL_TEST":
+      return { button: "Book Medical Test", label: "Medical test appointment", appointmentType: "MEDICAL_TEST", centerType: "MEDICAL" };
+    case "THEORY_EXAM":
+      return { button: "Book Theory Exam", label: "Theory exam appointment", appointmentType: "THEORY_EXAM", centerType: "THEORY_EXAM" };
+    case "PRACTICAL_EXAM":
+      return { button: "Book Practical Exam", label: "Practical exam appointment", appointmentType: "PRACTICAL_EXAM", centerType: "PRACTICAL_EXAM" };
+    default:
+      return null;
+  }
 }

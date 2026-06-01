@@ -825,6 +825,8 @@ components:
     RegisterBody:
       type: object
       properties:
+        fullName:
+          type: string
         email:
           type: string
         password:
@@ -839,6 +841,12 @@ components:
           type: string
         age:
           type: integer
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
         nationalId:
           type: string
         phone:
@@ -857,16 +865,18 @@ components:
           type: string
         idBackUrl:
           type: string
-      required: [email, password, firstName, secondName, thirdName, familyName, age, nationalId]
+      required: [email, password, firstName, familyName, nationalId, phone, dateOfBirth, gender, governorate, address]
 
     LoginBody:
       type: object
       properties:
+        identifier:
+          type: string
         email:
           type: string
         password:
           type: string
-      required: [email, password]
+      required: [password]
 
     AuthResponse:
       type: object
@@ -912,6 +922,13 @@ components:
           type: string
         age:
           type: integer
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          nullable: true
         nationalId:
           type: string
         phone:

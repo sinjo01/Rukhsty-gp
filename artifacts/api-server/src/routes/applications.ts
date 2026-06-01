@@ -8,6 +8,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { requireAuth, JwtPayload } from "../middlewares/auth";
 import type { Request } from "express";
+import { routeParam } from "../lib/route-params";
 
 const router = Router();
 
@@ -81,7 +82,7 @@ router.post("/applications", requireAuth, async (req, res) => {
 
 router.get("/applications/:id", requireAuth, async (req, res) => {
   const { userId } = (req as Request & { user: JwtPayload }).user;
-  const detail = await getApplicationDetail(req.params.id, userId);
+  const detail = await getApplicationDetail(routeParam(req, "id"), userId);
   if (!detail) { res.status(404).json({ message: "Application not found" }); return; }
   res.json(detail);
 });
@@ -93,7 +94,7 @@ router.post("/applications/:id/submit", requireAuth, async (req, res) => {
     currentStep: "TRAINING_CENTER_SELECTION",
     submittedAt: new Date(),
     updatedAt: new Date(),
-  }).where(and(eq(applicationsTable.id, req.params.id), eq(applicationsTable.userId, userId))).returning();
+  }).where(and(eq(applicationsTable.id, routeParam(req, "id")), eq(applicationsTable.userId, userId))).returning();
   if (!app) { res.status(404).json({ message: "Application not found" }); return; }
   await db.update(applicationStepsTable).set({ status: "COMPLETED" }).where(and(eq(applicationStepsTable.applicationId, app.id), eq(applicationStepsTable.stepKey, "PROFILE_REVIEW")));
   await db.update(applicationStepsTable).set({ status: "ACTIVE" }).where(and(eq(applicationStepsTable.applicationId, app.id), eq(applicationStepsTable.stepKey, "TRAINING_CENTER_SELECTION")));
@@ -105,7 +106,7 @@ router.post("/applications/:id/submit", requireAuth, async (req, res) => {
 router.post("/applications/:id/select-training-center", requireAuth, async (req, res) => {
   const { userId } = (req as Request & { user: JwtPayload }).user;
   const { centerId } = req.body;
-  const [app] = await db.select().from(applicationsTable).where(and(eq(applicationsTable.id, req.params.id), eq(applicationsTable.userId, userId))).limit(1);
+  const [app] = await db.select().from(applicationsTable).where(and(eq(applicationsTable.id, routeParam(req, "id")), eq(applicationsTable.userId, userId))).limit(1);
   if (!app) { res.status(404).json({ message: "Application not found" }); return; }
   const existing = await db.select().from(trainingRecordsTable).where(eq(trainingRecordsTable.applicationId, app.id)).limit(1);
   if (existing.length === 0) {

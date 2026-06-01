@@ -26,6 +26,7 @@ export default function AdminApplications() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [reviewDialog, setReviewDialog] = useState<{ open: boolean; id: string; action: "APPROVE" | "REJECT" }>({ open: false, id: "", action: "APPROVE" });
+  const [issueDialog, setIssueDialog] = useState<{ open: boolean; id: string }>({ open: false, id: "" });
   const [rejectionReason, setRejectionReason] = useState("");
 
   const { data, isLoading } = useListAdminApplications(
@@ -44,6 +45,27 @@ export default function AdminApplications() {
       setRejectionReason("");
     } catch {
       toast({ variant: "destructive", title: "Action failed" });
+    }
+  };
+
+  const handleIssueLicense = async () => {
+    try {
+      const response = await fetch(`/api/admin/applications/${issueDialog.id}/issue-license`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem("rukhsty_token") ?? ""}`,
+          accept: "application/json",
+        },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message ?? `HTTP ${response.status}`);
+      }
+      queryClient.invalidateQueries({ queryKey: getListAdminApplicationsQueryKey({} as any) });
+      toast({ title: "License issued", description: "The citizen can now view their digital license." });
+      setIssueDialog({ open: false, id: "" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "License issuance failed", description: error instanceof Error ? error.message : "Please try again." });
     }
   };
 
@@ -99,6 +121,11 @@ export default function AdminApplications() {
                       </Button>
                     </div>
                   )}
+                  {(app.status === "PRACTICAL_PASSED" || app.currentStep === "LICENSE_ISSUANCE") && (
+                    <Button size="sm" className="text-xs h-7 bg-emerald-700 hover:bg-emerald-800" onClick={() => setIssueDialog({ open: true, id: app.id })}>
+                      Issue License
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -125,6 +152,19 @@ export default function AdminApplications() {
             <Button className={reviewDialog.action === "APPROVE" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} onClick={handleReview} disabled={reviewMutation.isPending}>
               {reviewDialog.action === "APPROVE" ? "Confirm Approve" : "Confirm Reject"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={issueDialog.open} onOpenChange={(open) => setIssueDialog((d) => ({ ...d, open }))}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Issue Digital License</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Confirm that this application is ready for DVLD license issuance. This creates the citizen's official digital license record.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIssueDialog({ open: false, id: "" })}>Cancel</Button>
+            <Button className="bg-emerald-700 hover:bg-emerald-800" onClick={handleIssueLicense}>Issue License</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

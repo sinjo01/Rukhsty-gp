@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { devApiMock } from "./src/dev-api-mock";
 
 const rawPort = process.env.PORT;
 
@@ -26,9 +27,13 @@ if (!basePath) {
   );
 }
 
+const useMockApi = process.env.VITE_USE_MOCK === "true";
+const apiProxyTarget = process.env.API_PROXY_TARGET ?? "http://localhost:8080";
+
 export default defineConfig({
   base: basePath,
   plugins: [
+    ...(useMockApi ? [devApiMock()] : []),
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
@@ -63,6 +68,14 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: useMockApi
+      ? undefined
+      : {
+          "/api": {
+            target: apiProxyTarget,
+            changeOrigin: true,
+          },
+        },
     fs: {
       strict: true,
     },

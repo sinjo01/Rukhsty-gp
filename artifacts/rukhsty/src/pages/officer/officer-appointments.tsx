@@ -62,11 +62,13 @@ export default function OfficerAppointments() {
                     </div>
                     <div>
                       <p className="font-medium text-sm">{apt.profile?.firstName ?? apt.user?.email ?? "Citizen"} {apt.profile?.familyName ?? ""}</p>
-                      <p className="text-xs text-muted-foreground">{apt.profile?.nationalId ? `ID: ${apt.profile.nationalId}` : apt.user?.email ?? ""}</p>
+                      <p className="text-xs text-muted-foreground">{apt.profile?.nationalId ? `National ID: ${apt.profile.nationalId}` : apt.user?.email ?? ""}</p>
+                      <p className="text-xs text-muted-foreground">Application: <span className="font-mono">{apt.application?.applicationNumber ?? apt.applicationId}</span></p>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{apt.appointmentDate}</span>
                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{apt.startTime}</span>
                         <span className="font-medium text-foreground">{apt.appointmentType?.replace(/_/g, " ")}</span>
+                        {apt.queueNumber && <span>Queue #{apt.queueNumber}</span>}
                       </div>
                     </div>
                   </div>

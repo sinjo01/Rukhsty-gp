@@ -7,7 +7,8 @@ import {
 } from "@workspace/db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { requireAuth, requireAnyOfficerOrAdmin, JwtPayload } from "../middlewares/auth";
-import type { Request } from "express";
+import type { Request, Response } from "express";
+import { routeParam } from "../lib/route-params";
 
 const router = Router();
 
@@ -47,19 +48,24 @@ router.get("/officer/appointments", requireAuth, requireAnyOfficerOrAdmin, async
   const withUser = await Promise.all(apts.map(async (apt) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, apt.userId)).limit(1);
     const [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, apt.userId)).limit(1);
-    return { ...apt, center, user: user ?? null, profile: profile ?? null };
+    const [application] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, apt.applicationId)).limit(1);
+    return { ...apt, center, user: user ?? null, profile: profile ?? null, application: application ?? null };
   }));
   res.json(withUser);
 });
 
-router.put("/officer/appointments/:id/status", requireAuth, requireAnyOfficerOrAdmin, async (req, res) => {
+async function updateAppointmentStatus(req: Request, res: Response) {
   const { status, notes } = req.body;
-  const [apt] = await db.update(appointmentsTable).set({ status, notes, updatedAt: new Date() }).where(eq(appointmentsTable.id, req.params.id)).returning();
+  const [apt] = await db.update(appointmentsTable).set({ status, notes, updatedAt: new Date() }).where(eq(appointmentsTable.id, routeParam(req, "id"))).returning();
   if (!apt) { res.status(404).json({ message: "Appointment not found" }); return; }
   res.json(apt);
-});
+}
 
-router.put("/officer/training/:applicationId", requireAuth, requireAnyOfficerOrAdmin, async (req, res) => {
+router.patch("/officer/appointments/:id/update", requireAuth, requireAnyOfficerOrAdmin, updateAppointmentStatus);
+router.put("/officer/appointments/:id/update", requireAuth, requireAnyOfficerOrAdmin, updateAppointmentStatus);
+router.put("/officer/appointments/:id/status", requireAuth, requireAnyOfficerOrAdmin, updateAppointmentStatus);
+
+async function updateTraining(req: Request, res: Response) {
   const { theoreticalLessonsCompleted, practicalLessonsCompleted, status, instructorName, notes } = req.body;
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (theoreticalLessonsCompleted !== undefined) updateData.theoreticalLessonsCompleted = theoreticalLessonsCompleted;
@@ -71,7 +77,7 @@ router.put("/officer/training/:applicationId", requireAuth, requireAnyOfficerOrA
   }
   if (instructorName) updateData.instructorName = instructorName;
   if (notes) updateData.notes = notes;
-  const [record] = await db.update(trainingRecordsTable).set(updateData).where(eq(trainingRecordsTable.applicationId, req.params.applicationId)).returning();
+  const [record] = await db.update(trainingRecordsTable).set(updateData).where(eq(trainingRecordsTable.applicationId, routeParam(req, "applicationId"))).returning();
   if (!record) { res.status(404).json({ message: "Training record not found" }); return; }
   if (status === "COMPLETED") {
     const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, record.applicationId)).limit(1);
@@ -81,15 +87,19 @@ router.put("/officer/training/:applicationId", requireAuth, requireAnyOfficerOrA
     }
   }
   res.json(record);
-});
+}
 
-router.post("/officer/medical/:applicationId", requireAuth, requireAnyOfficerOrAdmin, async (req, res) => {
+router.patch("/officer/training/:applicationId/update", requireAuth, requireAnyOfficerOrAdmin, updateTraining);
+router.put("/officer/training/:applicationId/update", requireAuth, requireAnyOfficerOrAdmin, updateTraining);
+router.put("/officer/training/:applicationId", requireAuth, requireAnyOfficerOrAdmin, updateTraining);
+
+async function recordMedical(req: Request, res: Response) {
   const { userId: officerId } = (req as Request & { user: JwtPayload }).user;
-  const { centerId, result, leftEyeScore, rightEyeScore, requiresGlasses, isAllowedToDrive, notes } = req.body;
-  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, req.params.applicationId)).limit(1);
+  const { applicationId = routeParam(req, "applicationId"), centerId, result, leftEyeScore, rightEyeScore, requiresGlasses, isAllowedToDrive, notes } = req.body;
+  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, applicationId)).limit(1);
   if (!app) { res.status(404).json({ message: "Application not found" }); return; }
   const [test] = await db.insert(medicalTestsTable).values({
-    applicationId: req.params.applicationId,
+    applicationId,
     centerId,
     officerId,
     result,
@@ -101,19 +111,22 @@ router.post("/officer/medical/:applicationId", requireAuth, requireAnyOfficerOrA
   }).returning();
   const passed = result === "PASS_NO_GLASSES" || result === "PASS_WITH_GLASSES";
   const newStatus = passed ? "MEDICAL_PASSED" : "MEDICAL_FAILED";
-  await db.update(applicationsTable).set({ status: newStatus, currentStep: passed ? "THEORY_EXAM" : "MEDICAL_TEST", updatedAt: new Date() }).where(eq(applicationsTable.id, req.params.applicationId));
+  await db.update(applicationsTable).set({ status: newStatus, currentStep: passed ? "THEORY_EXAM" : "MEDICAL_TEST", updatedAt: new Date() }).where(eq(applicationsTable.id, applicationId));
   await db.insert(notificationsTable).values({ userId: app.userId, title: passed ? "نتيجة الفحص الطبي: نجاح" : "نتيجة الفحص الطبي: فشل", message: passed ? "لقد اجتزت الفحص الطبي بنجاح. يرجى حجز موعد الاختبار النظري." : "للأسف لم تجتز الفحص الطبي. يرجى مراجعة المركز.", type: passed ? "SUCCESS" : "ERROR" });
   res.status(201).json(test);
-});
+}
 
-router.post("/officer/exams/:applicationId", requireAuth, requireAnyOfficerOrAdmin, async (req, res) => {
+router.post("/officer/medical/record", requireAuth, requireAnyOfficerOrAdmin, recordMedical);
+router.post("/officer/medical/:applicationId", requireAuth, requireAnyOfficerOrAdmin, recordMedical);
+
+async function recordExam(req: Request, res: Response) {
   const { userId: officerId } = (req as Request & { user: JwtPayload }).user;
-  const { centerId, examType, score, maxScore, result, notes } = req.body;
-  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, req.params.applicationId)).limit(1);
+  const { applicationId = routeParam(req, "applicationId"), centerId, examType, score, maxScore, result, notes } = req.body;
+  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, applicationId)).limit(1);
   if (!app) { res.status(404).json({ message: "Application not found" }); return; }
-  const prevExams = await db.select().from(examsTable).where(and(eq(examsTable.applicationId, req.params.applicationId), eq(examsTable.examType, examType)));
+  const prevExams = await db.select().from(examsTable).where(and(eq(examsTable.applicationId, applicationId), eq(examsTable.examType, examType)));
   const [exam] = await db.insert(examsTable).values({
-    applicationId: req.params.applicationId,
+    applicationId,
     centerId,
     officerId,
     examType,
@@ -132,9 +145,12 @@ router.post("/officer/exams/:applicationId", requireAuth, requireAnyOfficerOrAdm
     newStatus = passed ? "PRACTICAL_PASSED" : "PRACTICAL_FAILED";
     newStep = passed ? "LICENSE_ISSUANCE" : "PRACTICAL_EXAM";
   }
-  await db.update(applicationsTable).set({ status: newStatus, currentStep: newStep, updatedAt: new Date() }).where(eq(applicationsTable.id, req.params.applicationId));
+  await db.update(applicationsTable).set({ status: newStatus, currentStep: newStep, updatedAt: new Date() }).where(eq(applicationsTable.id, applicationId));
   await db.insert(notificationsTable).values({ userId: app.userId, title: passed ? `نجحت في الاختبار ${examType === "THEORY" ? "النظري" : "العملي"}` : `رسبت في الاختبار ${examType === "THEORY" ? "النظري" : "العملي"}`, message: passed ? "مبروك! يمكنك المتابعة للمرحلة التالية." : "للأسف لم تجتز الاختبار. يمكنك إعادة المحاولة.", type: passed ? "SUCCESS" : "ERROR" });
   res.status(201).json(exam);
-});
+}
+
+router.post("/officer/exams/record", requireAuth, requireAnyOfficerOrAdmin, recordExam);
+router.post("/officer/exams/:applicationId", requireAuth, requireAnyOfficerOrAdmin, recordExam);
 
 export default router;

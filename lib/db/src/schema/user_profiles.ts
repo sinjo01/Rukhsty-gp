@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, uuid, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, uuid, pgEnum, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -19,6 +19,8 @@ export const userProfilesTable = pgTable("user_profiles", {
   thirdName: text("third_name").notNull(),
   familyName: text("family_name").notNull(),
   age: integer("age").notNull(),
+  dateOfBirth: date("date_of_birth"),
+  gender: text("gender"),
   nationalId: text("national_id").notNull().unique(),
   phone: text("phone"),
   governorate: text("governorate"),

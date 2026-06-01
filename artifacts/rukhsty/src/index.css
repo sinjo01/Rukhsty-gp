@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
+@source ".";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -66,7 +67,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE - Clean Whites, Deep Navy Accents */
+/* LIGHT MODE - Official Jordanian government-inspired palette */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
@@ -95,22 +96,22 @@
   --popover-foreground: 222 47% 11%;
   --popover-border: 214 32% 91%;
 
-  --primary: 222 47% 11%; /* Dark Navy */
+  --primary: 154 64% 18%; /* Official deep green */
   --primary-foreground: 210 40% 98%;
   --secondary: 210 40% 96%;
   --secondary-foreground: 222 47% 11%;
   --muted: 210 40% 96%;
   --muted-foreground: 215 16% 47%;
-  --accent: 142 71% 45%; /* Emerald Green */
-  --accent-foreground: 210 40% 98%;
+  --accent: 42 78% 58%; /* Gold */
+  --accent-foreground: 154 64% 14%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
   
   --input: 214 32% 91%;
-  --ring: 222 47% 11%;
+  --ring: 154 64% 18%;
   
-  --chart-1: 222 47% 11%;
-  --chart-2: 142 71% 45%;
+  --chart-1: 154 64% 18%;
+  --chart-2: 42 78% 58%;
   --chart-3: 214 32% 91%;
   --chart-4: 215 16% 47%;
   --chart-5: 221 83% 53%;
@@ -134,7 +135,7 @@
   --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE - Deep Navy, Royal Blue, Glassmorphism */
+/* DARK MODE - Deep green, gold, restrained contrast */
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -164,22 +165,22 @@
   --popover-foreground: 210 40% 98%;
   --popover-border: 217 33% 17%;
 
-  --primary: 221 83% 53%; /* Royal Blue */
+  --primary: 153 54% 42%;
   --primary-foreground: 210 40% 98%;
   --secondary: 217 33% 17%;
   --secondary-foreground: 210 40% 98%;
   --muted: 217 33% 17%;
   --muted-foreground: 215 20.2% 65.1%;
-  --accent: 142 71% 45%; /* Emerald Green */
-  --accent-foreground: 210 40% 98%;
+  --accent: 42 78% 58%;
+  --accent-foreground: 154 64% 14%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
 
   --input: 217 33% 17%;
-  --ring: 221 83% 53%;
+  --ring: 153 54% 42%;
 
-  --chart-1: 221 83% 53%;
-  --chart-2: 142 71% 45%;
+  --chart-1: 153 54% 42%;
+  --chart-2: 42 78% 58%;
   --chart-3: 217 33% 17%;
   --chart-4: 215 20.2% 65.1%;
   --chart-5: 210 40% 98%;

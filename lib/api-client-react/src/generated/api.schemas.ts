@@ -18,27 +18,39 @@ export interface ErrorResponse {
   message: string;
 }
 
+export type RegisterBodyGender =
+  (typeof RegisterBodyGender)[keyof typeof RegisterBodyGender];
+
+export const RegisterBodyGender = {
+  MALE: "MALE",
+  FEMALE: "FEMALE",
+} as const;
+
 export interface RegisterBody {
+  fullName?: string;
   email: string;
   password: string;
   firstName: string;
-  secondName: string;
-  thirdName: string;
+  secondName?: string;
+  thirdName?: string;
   familyName: string;
-  age: number;
+  age?: number;
+  dateOfBirth: string;
+  gender: RegisterBodyGender;
   nationalId: string;
-  phone?: string;
-  governorate?: string;
+  phone: string;
+  governorate: string;
   city?: string;
   area?: string;
-  address?: string;
+  address: string;
   personalPhotoUrl?: string;
   idFrontUrl?: string;
   idBackUrl?: string;
 }
 
 export interface LoginBody {
-  email: string;
+  identifier?: string;
+  email?: string;
   password: string;
 }
 
@@ -79,6 +91,8 @@ export interface UserProfile {
   thirdName: string;
   familyName: string;
   age: number;
+  dateOfBirth?: string | null;
+  gender?: string | null;
   nationalId: string;
   phone?: string | null;
   governorate?: string | null;

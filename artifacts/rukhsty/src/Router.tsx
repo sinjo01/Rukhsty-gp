@@ -11,6 +11,8 @@ import Dashboard from "@/pages/citizen/dashboard";
 import Profile from "@/pages/citizen/profile";
 import Services from "@/pages/citizen/services";
 import ServiceIssueLicense from "@/pages/citizen/service-issue-license";
+import ServiceRenewDrivingLicense from "@/pages/citizen/service-renew-driving-license";
+import ServiceRenewVehicleRegistration from "@/pages/citizen/service-renew-vehicle-registration";
 import Applications from "@/pages/citizen/applications";
 import ApplicationDetail from "@/pages/citizen/application-detail";
 import Appointments from "@/pages/citizen/appointments";
@@ -59,6 +61,8 @@ export default function AppRouter() {
         <Route path="/profile" component={() => <ProtectedRoute component={Profile} allowedRoles={["USER"]} />} />
         <Route path="/services" component={() => <ProtectedRoute component={Services} allowedRoles={["USER"]} />} />
         <Route path="/services/issue-driving-license" component={() => <ProtectedRoute component={ServiceIssueLicense} allowedRoles={["USER"]} />} />
+        <Route path="/services/renew-driving-license" component={() => <ProtectedRoute component={ServiceRenewDrivingLicense} allowedRoles={["USER"]} />} />
+        <Route path="/services/renew-vehicle-registration" component={() => <ProtectedRoute component={ServiceRenewVehicleRegistration} allowedRoles={["USER"]} />} />
         <Route path="/applications" component={() => <ProtectedRoute component={Applications} allowedRoles={["USER"]} />} />
         <Route path="/applications/:id">
           {(params) => <ProtectedRoute component={ApplicationDetail} allowedRoles={["USER"]} params={params} />}

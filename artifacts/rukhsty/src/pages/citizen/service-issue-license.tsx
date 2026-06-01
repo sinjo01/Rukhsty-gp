@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import {
   useListLicenseCategories, getListLicenseCategoriesQueryKey,
   useListCenters, getListCentersQueryKey,
-  useCreateApplication, useSelectTrainingCenter
+  useCreateApplication, useSelectTrainingCenter,
+  useListServices, getListServicesQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -32,6 +33,7 @@ export default function ServiceIssueLicense() {
   const [applicationId, setApplicationId] = useState<string>("");
 
   const { data: categories, isLoading: catsLoading } = useListLicenseCategories({ query: { queryKey: getListLicenseCategoriesQueryKey() } });
+  const { data: services } = useListServices({ query: { queryKey: getListServicesQueryKey() } });
   const { data: centers, isLoading: centersLoading } = useListCenters(
     { centerType: "TRAINING", governorate: selectedGovernorate || undefined },
     { query: { queryKey: getListCentersQueryKey({ centerType: "TRAINING", governorate: selectedGovernorate || undefined }), enabled: step === 2 } }
@@ -43,8 +45,10 @@ export default function ServiceIssueLicense() {
     if (step === 1) {
       // Create the application
       if (!selectedCategoryId) { toast({ variant: "destructive", title: "Please select a license category" }); return; }
+      const service = services?.find((item) => item.code === "ISSUE_DRIVING_LICENSE");
+      if (!service) { toast({ variant: "destructive", title: "Issue license service is not available" }); return; }
       try {
-        const app = await createApp.mutateAsync({ data: { licenseCategoryId: selectedCategoryId, governorate: selectedGovernorate || user?.profile?.governorate, residenceArea: user?.profile?.area } as any });
+        const app = await createApp.mutateAsync({ data: { serviceId: service.id, licenseCategoryId: selectedCategoryId, governorate: selectedGovernorate || user?.profile?.governorate || "Amman", residenceArea: user?.profile?.area || user?.profile?.city || "Amman" } });
         setApplicationId((app as any).id);
         setStep(2);
       } catch {

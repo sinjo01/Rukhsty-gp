@@ -1,11 +1,14 @@
-import { useLocation, Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { IdCard, LogIn, Mail, Shield } from "lucide-react";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 import {
   Form,
   FormControl,
@@ -18,47 +21,59 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
-
 const DEMO_ACCOUNTS = [
-  { label: "Admin", email: "admin@rukhsty.jo", password: "Admin123!" },
-  { label: "User", email: "user@rukhsty.jo", password: "User123!" },
-  { label: "Training Officer", email: "training.officer@rukhsty.jo", password: "Officer123!" },
-  { label: "Medical Officer", email: "medical.officer@rukhsty.jo", password: "Officer123!" },
-  { label: "Theory Officer", email: "theory.officer@rukhsty.jo", password: "Officer123!" },
-  { label: "Practical Officer", email: "practical.officer@rukhsty.jo", password: "Officer123!" },
+  { label: "Admin", email: "admin@rukhsty.jo", nationalId: "9876543210", password: "Admin123!" },
+  { label: "User", email: "user@rukhsty.jo", nationalId: "9876543210", password: "User123!" },
+  { label: "Training Officer", email: "training.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
+  { label: "Medical Officer", email: "medical.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
+  { label: "Theory Officer", email: "theory.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
+  { label: "Practical Officer", email: "practical.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
 ];
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
+  const { isRTL, t, toggleLanguage } = useLanguage();
   const loginMutation = useLogin();
+
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        identifier: z.string().trim().min(1, t("validationRequired")),
+        password: z.string().min(1, t("validationRequired")),
+      }),
+    [t],
+  );
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   });
 
-  const fillCredentials = (email: string, password: string) => {
-    form.setValue("email", email, { shouldValidate: true });
+  const fillCredentials = (identifier: string, password: string) => {
+    form.setValue("identifier", identifier, { shouldValidate: true });
     form.setValue("password", password, { shouldValidate: true });
   };
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     try {
-      const response = await loginMutation.mutateAsync({ data: values });
+      const normalizedIdentifier = values.identifier.trim();
+      const response = await loginMutation.mutateAsync({
+        data: {
+          identifier: normalizedIdentifier,
+          email: normalizedIdentifier.includes("@") ? normalizedIdentifier : undefined,
+          password: values.password,
+        },
+      });
       login(response.token, response.user);
 
       toast({
-        title: "Login successful",
-        description: "Welcome back to Rukhsty.",
+        title: t("loginSuccessTitle"),
+        description: t("loginSuccessDescription"),
       });
 
       if (response.user.role === "ADMIN") {
@@ -68,101 +83,125 @@ export default function Login() {
       } else {
         setLocation("/dashboard");
       }
-    } catch (error: any) {
+    } catch {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
+        title: t("loginFailedTitle"),
+        description: t("loginFailedDescription"),
       });
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex items-center justify-center gap-2 text-primary mb-6">
-          <Shield className="w-10 h-10" />
-          <span className="font-bold text-3xl tracking-tight">Rukhsty | رخصتي</span>
-        </Link>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
-          Sign in to your account
-        </h2>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-background">
+      <header className="h-16 border-b bg-card/80 backdrop-blur-md">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2 text-primary">
+            <Shield className="h-7 w-7" />
+            <span className="text-xl font-bold tracking-tight">{t("brandName")}</span>
+          </Link>
+          <Button variant="outline" size="sm" onClick={toggleLanguage}>
+            {t("languageToggle")}
+          </Button>
+        </div>
+      </header>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card className="glass-panel border-0 shadow-2xl">
-          <CardHeader>
-            <CardTitle>Welcome back</CardTitle>
-            <CardDescription>Enter your credentials to access the platform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="name@example.com" type="email" autoComplete="username" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input placeholder="••••••••" type="password" autoComplete="current-password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending ? "Signing in..." : "Sign in"}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <div className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/register" className="font-medium text-primary hover:underline">
-                Register here
-              </Link>
+      <main className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className={cn("rounded-2xl bg-primary p-8 text-white shadow-xl", isRTL && "lg:order-2")}>
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
+            <Shield className="h-7 w-7 text-accent" />
+          </div>
+          <h1 className="mt-8 text-3xl font-bold leading-tight">{t("signInTitle")}</h1>
+          <p className="mt-4 leading-relaxed text-white/75">{t("signInDescription")}</p>
+          <div className="mt-8 grid gap-3 text-sm text-white/80">
+            <div className="flex items-center gap-3">
+              <IdCard className="h-5 w-5 text-accent" />
+              <span>{t("emailOrNationalId")}</span>
             </div>
+            <div className="flex items-center gap-3">
+              <Mail className="h-5 w-5 text-accent" />
+              <span>{t("loginHelper")}</span>
+            </div>
+          </div>
+        </section>
 
-            <div className="mt-2 p-3 bg-muted/50 rounded-lg border w-full">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Demo Accounts — click to fill:</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {DEMO_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => fillCredentials(acc.email, acc.password)}
-                    className="text-left px-2 py-1.5 rounded-md bg-background hover:bg-primary/10 border border-border transition-colors text-xs"
-                  >
-                    <span className="font-medium text-foreground block">{acc.label}</span>
-                    <span className="text-muted-foreground truncate block">{acc.email}</span>
-                  </button>
-                ))}
+        <section className={cn(isRTL && "lg:order-1")}>
+          <Card className="border-slate-200 shadow-2xl">
+            <CardHeader>
+              <CardTitle>{t("loginWelcome")}</CardTitle>
+              <CardDescription>{t("loginHelper")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="identifier"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("emailOrNationalId")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t("emailOrNationalIdPlaceholder")} autoComplete="username" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("password")}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="••••••••" type="password" autoComplete="current-password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full gap-2" disabled={loginMutation.isPending}>
+                    <LogIn className="h-4 w-4" />
+                    {loginMutation.isPending ? t("signingIn") : t("signIn")}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <div className="text-center text-sm text-muted-foreground">
+                {t("noAccount")}{" "}
+                <Link href="/register" className="font-medium text-primary hover:underline">
+                  {t("registerHere")}
+                </Link>
               </div>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
+
+              <div className="w-full rounded-lg border bg-muted/50 p-3">
+                <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                  {t("demoAccounts")} - {t("clickToFill")}:
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {DEMO_ACCOUNTS.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => fillCredentials(account.email, account.password)}
+                      className={cn(
+                        "rounded-md border border-border bg-background px-2 py-1.5 text-xs transition-colors hover:bg-primary/10",
+                        isRTL ? "text-right" : "text-left",
+                      )}
+                    >
+                      <span className="block font-medium text-foreground">{account.label}</span>
+                      <span className="block truncate text-muted-foreground">{account.email}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
+        </section>
+      </main>
     </div>
   );
 }

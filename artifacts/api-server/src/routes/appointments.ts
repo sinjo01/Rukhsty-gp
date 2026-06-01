@@ -3,7 +3,8 @@ import { db } from "@workspace/db";
 import { appointmentsTable, centersTable, notificationsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, JwtPayload } from "../middlewares/auth";
-import type { Request } from "express";
+import type { Request, Response } from "express";
+import { routeParam } from "../lib/route-params";
 
 const router = Router();
 
@@ -47,11 +48,14 @@ router.post("/appointments", requireAuth, async (req, res) => {
   res.status(201).json({ ...apt, center: center ?? null });
 });
 
-router.delete("/appointments/:id", requireAuth, async (req, res) => {
+async function cancelAppointment(req: Request, res: Response) {
   const { userId } = (req as Request & { user: JwtPayload }).user;
-  const [apt] = await db.update(appointmentsTable).set({ status: "CANCELLED", updatedAt: new Date() }).where(and(eq(appointmentsTable.id, req.params.id), eq(appointmentsTable.userId, userId))).returning();
+  const [apt] = await db.update(appointmentsTable).set({ status: "CANCELLED", updatedAt: new Date() }).where(and(eq(appointmentsTable.id, routeParam(req, "id")), eq(appointmentsTable.userId, userId))).returning();
   if (!apt) { res.status(404).json({ message: "Appointment not found" }); return; }
   res.json(apt);
-});
+}
+
+router.post("/appointments/:id/cancel", requireAuth, cancelAppointment);
+router.delete("/appointments/:id", requireAuth, cancelAppointment);
 
 export default router;
