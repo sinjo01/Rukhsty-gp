@@ -63,6 +63,12 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
         { label: t("centers"), href: "/admin/centers", icon: Building2 },
       ];
     }
+
+    if (user.role === "SECURITY_OFFICER") {
+      return [
+        { label: isRTL ? "المراجعة الأمنية" : "Security Review", href: "/security/review", icon: Shield },
+      ];
+    }
     
     if (user.role.includes("OFFICER")) {
       return [
@@ -78,7 +84,7 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
       { label: t("services"), href: "/services", icon: Settings },
       { label: t("applications"), href: "/applications", icon: FileText },
       { label: t("appointments"), href: "/appointments", icon: Calendar },
-      { label: t("myLicense"), href: "/license-card", icon: CreditCard },
+      { label: t("myLicense"), href: "/my-license", icon: CreditCard },
       { label: t("profile"), href: "/profile", icon: UserIcon },
     ];
   };

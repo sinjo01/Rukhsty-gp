@@ -16,12 +16,24 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope, Route, Sparkles } from "lucide-react";
+import { currentStepLabel, isMedicalBookingRequired, isPracticalBookingRequired, isTheoryBookingRequired, statusLabel } from "./application-utils";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   PROFILE_SUBMITTED: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  SECURITY_REVIEW: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  SECURITY_APPROVED: "bg-emerald-100 text-emerald-700",
+  SECURITY_REJECTED: "bg-red-100 text-red-700",
+  MEDICAL_BOOKING: "bg-purple-100 text-purple-700",
+  MEDICAL_APPOINTMENT_BOOKED: "bg-purple-100 text-purple-700",
+  MEDICAL_REJECTED: "bg-red-100 text-red-700",
+  THEORY_BOOKING: "bg-blue-100 text-blue-700",
+  THEORY_APPOINTMENT_BOOKED: "bg-blue-100 text-blue-700",
+  PRACTICAL_BOOKING: "bg-amber-100 text-amber-700",
+  PRACTICAL_APPOINTMENT_BOOKED: "bg-amber-100 text-amber-700",
   TRAINING_CENTER_SELECTED: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   TRAINING_COMPLETED: "bg-green-100 text-green-700",
   MEDICAL_PASSED: "bg-green-100 text-green-700",
@@ -46,6 +58,7 @@ function StepIcon({ status }: { status: string }) {
 export default function ApplicationDetail({ params }: { params: { id: string } }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { language, isRTL } = useLanguage();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedCenterId, setSelectedCenterId] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
@@ -54,6 +67,15 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
     query: { queryKey: getGetApplicationQueryKey(params.id), enabled: !!params.id },
   });
   const bookAppointment = useBookAppointment();
+  const detail = app as any;
+  const booking = getBookingConfig(detail?.currentStep);
+  const centersParams = {
+    centerType: booking?.centerType,
+    governorate: detail?.governorate ?? undefined,
+  };
+  const { data: centers } = useListCenters(centersParams as any, {
+    query: { queryKey: getListCentersQueryKey(centersParams), enabled: !!booking },
+  });
 
   if (isLoading) {
     return (
@@ -72,15 +94,13 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
     </div>
   );
 
-  const detail = app as any;
   const steps = detail.steps ?? [];
+  const orderedSteps = [...steps].sort((a: any, b: any) => a.orderNumber - b.orderNumber);
+  const completedSteps = orderedSteps.filter((step: any) => step.status === "COMPLETED").length;
+  const activeStepIndex = Math.max(0, orderedSteps.findIndex((step: any) => step.status === "ACTIVE" || step.status === "FAILED"));
+  const progressPercent = orderedSteps.length > 0 ? Math.round((completedSteps / orderedSteps.length) * 100) : 0;
   const appointments = detail.appointments ?? [];
   const exams = detail.exams ?? [];
-  const booking = getBookingConfig(detail.currentStep);
-  const { data: centers } = useListCenters(
-    { centerType: booking?.centerType, governorate: detail.governorate ?? undefined },
-    { query: { queryKey: getListCentersQueryKey({ centerType: booking?.centerType, governorate: detail.governorate ?? undefined }), enabled: !!booking } }
-  );
 
   const handleBookAppointment = async () => {
     if (!booking || !selectedCenterId || !appointmentDate || !startTime) {
@@ -103,7 +123,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
         },
       });
       await queryClient.invalidateQueries({ queryKey: getGetApplicationQueryKey(params.id) });
-      toast({ title: "Appointment booked", description: "Your booking was saved successfully." });
+      toast({ title: language === "ar" ? "تم حجز الموعد" : "Appointment booked", description: language === "ar" ? "تم حفظ الحجز بنجاح." : "Your booking was saved successfully." });
       setBookingOpen(false);
       setSelectedCenterId("");
     } catch (error) {
@@ -112,7 +132,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
         <Link href="/applications">
           <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
@@ -121,38 +141,114 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
           <h1 className="text-xl font-bold font-mono">{detail.applicationNumber}</h1>
           <div className="flex items-center gap-2 mt-1">
             <Badge className={`text-xs ${STATUS_COLORS[detail.status] ?? "bg-slate-100 text-slate-700"}`}>
-              {detail.status?.replace(/_/g, " ")}
+              {statusLabel(detail.status, language)}
             </Badge>
             <span className="text-xs text-muted-foreground">{detail.service?.nameEn ?? "Driving License"}</span>
           </div>
         </div>
       </motion.div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{language === "ar" ? "ملخص الطلب" : "Application summary"}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {[
+            [language === "ar" ? "نوع الخدمة" : "Service", language === "ar" ? detail.service?.nameAr : detail.service?.nameEn],
+            [language === "ar" ? "اسم المواطن" : "Citizen name", [detail.profile?.firstName, detail.profile?.secondName, detail.profile?.thirdName, detail.profile?.familyName].filter(Boolean).join(" ")],
+            [language === "ar" ? "الرقم الوطني" : "National ID", detail.profile?.nationalId],
+            [language === "ar" ? "فئة الرخصة" : "License category", language === "ar" ? detail.licenseCategory?.nameAr : detail.licenseCategory?.nameEn],
+            [language === "ar" ? "الخطوة الحالية" : "Current step", currentStepLabel(detail.currentStep, language)],
+            [language === "ar" ? "تاريخ التقديم" : "Submitted date", detail.submittedAt ? new Date(detail.submittedAt).toLocaleDateString() : "—"],
+            [language === "ar" ? "آخر تحديث" : "Last updated", detail.updatedAt ? new Date(detail.updatedAt).toLocaleDateString() : "—"],
+            [language === "ar" ? "الإجراء التالي" : "Next required action", isMedicalBookingRequired(detail) ? (language === "ar" ? "حجز فحص النظر" : "Book Medical / Vision Test") : isTheoryBookingRequired(detail) ? (language === "ar" ? "حجز الامتحان النظري" : "Book Theory Exam") : isPracticalBookingRequired(detail) ? (language === "ar" ? "حجز الامتحان العملي" : "Book Practical Exam") : currentStepLabel(detail.currentStep, language)],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg bg-muted/50 p-3">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="mt-1 text-sm font-medium">{value || "—"}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* Step Tracker */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Application Progress</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-0">
-              {steps.sort((a: any, b: any) => a.orderNumber - b.orderNumber).map((step: any, i: number) => (
-                <div key={step.id} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <StepIcon status={step.status} />
-                    {i < steps.length - 1 && (
-                      <div className={`w-0.5 h-8 mt-1 ${step.status === "COMPLETED" ? "bg-green-300" : "bg-border"}`} />
-                    )}
+        <Card className="overflow-hidden border-emerald-100">
+          <CardHeader className="border-b bg-gradient-to-br from-emerald-950 via-emerald-800 to-slate-900 pb-5 text-white">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Route className="h-5 w-5 text-amber-100" />
+                  {language === "ar" ? "تتبع مراحل الطلب" : "Application Tracking"}
+                </CardTitle>
+                <p className="mt-2 text-sm text-white/75">
+                  {language === "ar" ? "تابع المرحلة الحالية والإنجازات السابقة في طلبك." : "Follow your current stage and completed milestones."}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm">
+                <p className="text-white/70">{language === "ar" ? "نسبة الإنجاز" : "Progress"}</p>
+                <p className="text-2xl font-bold">{progressPercent}%</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5 p-5">
+            <div>
+              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{language === "ar" ? "البداية" : "Start"}</span>
+                <span>{language === "ar" ? "إصدار الرخصة" : "License issued"}</span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-amber-400 transition-all" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {orderedSteps.map((step: any, i: number) => {
+                const isCurrent = step.status === "ACTIVE" || i === activeStepIndex;
+                const isCompleted = step.status === "COMPLETED";
+                const isFailed = step.status === "FAILED";
+                return (
+                  <div
+                    key={step.id}
+                    className={`rounded-2xl border p-4 transition-all ${
+                      isFailed
+                        ? "border-red-200 bg-red-50"
+                        : isCurrent
+                        ? "border-emerald-300 bg-emerald-50 shadow-sm"
+                        : isCompleted
+                        ? "border-emerald-100 bg-white"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                        isFailed
+                          ? "border-red-200 bg-white text-red-600"
+                          : isCompleted
+                          ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                          : isCurrent
+                          ? "border-emerald-300 bg-white text-emerald-700"
+                          : "border-slate-200 bg-slate-50 text-slate-400"
+                      }`}>
+                        {isCurrent && !isFailed ? <Sparkles className="h-5 w-5" /> : <StepIcon status={step.status} />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold ${isFailed ? "text-red-800" : isCurrent ? "text-emerald-950" : "text-slate-900"}`}>
+                          {language === "ar" ? step.stepNameAr : step.stepNameEn}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className={`text-xs ${
+                            isCurrent ? "border-emerald-300 text-emerald-700" : isCompleted ? "border-emerald-200 text-emerald-700" : isFailed ? "border-red-300 text-red-700" : ""
+                          }`}>
+                            {translateStepStatus(step.status, language)}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{language === "ar" ? "مرحلة" : "Step"} {i + 1} / {orderedSteps.length}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className={`pb-6 ${i === steps.length - 1 ? "pb-0" : ""}`}>
-                    <p className={`text-sm font-medium ${step.status === "ACTIVE" ? "text-blue-600 dark:text-blue-400" : step.status === "COMPLETED" ? "text-foreground" : "text-muted-foreground"}`}>
-                      {step.stepNameEn}
-                    </p>
-                    <p className="text-xs text-muted-foreground" dir="rtl">{step.stepNameAr}</p>
-                    <Badge variant="outline" className={`mt-1 text-xs ${step.status === "ACTIVE" ? "border-blue-300 text-blue-600" : step.status === "COMPLETED" ? "border-green-300 text-green-600" : step.status === "FAILED" ? "border-red-300 text-red-600" : ""}`}>
-                      {step.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -162,10 +258,24 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <p className="font-medium text-sm">{booking.label}</p>
-              <p className="text-xs text-muted-foreground">Choose an authorized center and available time.</p>
+              <p className="font-medium text-sm">{language === "ar" ? booking.labelAr : booking.label}</p>
+              <p className="text-xs text-muted-foreground">{language === "ar" ? "اختر المركز المعتمد والوقت المناسب." : "Choose an authorized center and available time."}</p>
             </div>
-            <Button onClick={() => setBookingOpen(true)}>{booking.button}</Button>
+            {isMedicalBookingRequired(detail) ? (
+              <Link href={`/applications/${detail.id}/book-medical`}>
+                <Button className="bg-emerald-700 hover:bg-emerald-800">{language === "ar" ? booking.buttonAr : booking.button}</Button>
+              </Link>
+            ) : isTheoryBookingRequired(detail) ? (
+              <Link href={`/applications/${detail.id}/book-theory`}>
+                <Button className="bg-emerald-700 hover:bg-emerald-800">{language === "ar" ? booking.buttonAr : booking.button}</Button>
+              </Link>
+            ) : isPracticalBookingRequired(detail) ? (
+              <Link href={`/applications/${detail.id}/book-practical`}>
+                <Button className="bg-emerald-700 hover:bg-emerald-800">{language === "ar" ? booking.buttonAr : booking.button}</Button>
+              </Link>
+            ) : (
+              <Button onClick={() => setBookingOpen(true)}>{language === "ar" ? booking.buttonAr : booking.button}</Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -175,6 +285,22 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
           <CardContent className="p-4">
             <p className="font-medium text-sm text-amber-900">Waiting for DVLD/Admin license issuance</p>
             <p className="text-xs text-amber-800 mt-1">Your practical result is complete. An authorized officer must issue the digital license.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {detail.status === "LICENSE_ISSUED" && (
+        <Card className="overflow-hidden border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
+          <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="font-bold text-lg text-emerald-950 dark:text-emerald-100">{language === "ar" ? "تم إصدار رخصتك بنجاح." : "Your license has been issued successfully."}</p>
+              <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1">{language === "ar" ? "يمكنك الآن عرض الرخصة الرقمية أو فتح صفحة التهنئة." : "You can now view your digital license or open the congratulations page."}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/my-license"><Button className="bg-emerald-700 hover:bg-emerald-800">{language === "ar" ? "عرض الرخصة" : "View License"}</Button></Link>
+              <Link href={`/applications/${detail.id}/success`}><Button variant="outline">{language === "ar" ? "فتح صفحة التهنئة" : "Open Congratulations Page"}</Button></Link>
+              <Link href="/dashboard"><Button variant="outline">{language === "ar" ? "العودة للوحة الرئيسية" : "Back to Dashboard"}</Button></Link>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -221,7 +347,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div><p className="text-xs text-muted-foreground">Result</p><Badge className={`mt-1 text-xs ${detail.medicalTest.result?.includes("PASS") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{detail.medicalTest.result?.replace(/_/g, " ")}</Badge></div>
+                <div><p className="text-xs text-muted-foreground">Result</p><Badge className={`mt-1 text-xs ${["DOES_NOT_NEED_GLASSES", "NEEDS_GLASSES", "PASS_NO_GLASSES", "PASS_WITH_GLASSES"].includes(detail.medicalTest.result) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{detail.medicalTest.result?.replace(/_/g, " ")}</Badge></div>
                 <div><p className="text-xs text-muted-foreground">Left Eye</p><p className="font-medium">{detail.medicalTest.leftEyeScore ?? "—"}</p></div>
                 <div><p className="text-xs text-muted-foreground">Right Eye</p><p className="font-medium">{detail.medicalTest.rightEyeScore ?? "—"}</p></div>
               </div>
@@ -303,10 +429,10 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
 
       <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{booking?.button ?? "Book Appointment"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{booking ? (language === "ar" ? booking.buttonAr : booking.button) : "Book Appointment"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <Select value={selectedCenterId} onValueChange={setSelectedCenterId}>
-              <SelectTrigger><SelectValue placeholder="Select center" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={language === "ar" ? "اختر المركز" : "Select center"} /></SelectTrigger>
               <SelectContent>
                 {centers?.map((center: any) => (
                   <SelectItem key={center.id} value={center.id}>{center.nameEn} - {center.governorate}</SelectItem>
@@ -317,9 +443,9 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
             <Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBookingOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBookingOpen(false)}>{language === "ar" ? "إلغاء" : "Cancel"}</Button>
             <Button onClick={handleBookAppointment} disabled={bookAppointment.isPending}>
-              {bookAppointment.isPending ? "Booking..." : "Confirm Booking"}
+              {bookAppointment.isPending ? (language === "ar" ? "جارٍ الحجز..." : "Booking...") : (language === "ar" ? "تأكيد الحجز" : "Confirm Booking")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -330,15 +456,28 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
 
 function getBookingConfig(step?: string) {
   switch (step) {
-    case "TRAINING":
-      return { button: "Book Training Appointment", label: "Training appointment", appointmentType: "TRAINING", centerType: "TRAINING" };
+    case "MEDICAL_BOOKING":
     case "MEDICAL_TEST":
-      return { button: "Book Medical Test", label: "Medical test appointment", appointmentType: "MEDICAL_TEST", centerType: "MEDICAL" };
+      return { button: "Book Medical / Vision Test", buttonAr: "حجز فحص النظر", label: "Medical / vision test appointment", labelAr: "موعد فحص النظر", appointmentType: "MEDICAL_TEST", centerType: "HEALTH_CENTER" };
+    case "THEORY_BOOKING":
     case "THEORY_EXAM":
-      return { button: "Book Theory Exam", label: "Theory exam appointment", appointmentType: "THEORY_EXAM", centerType: "THEORY_EXAM" };
+      return { button: "Book Theory Exam", buttonAr: "حجز الامتحان النظري", label: "Theory exam appointment", labelAr: "موعد الامتحان النظري", appointmentType: "THEORY_EXAM", centerType: "EXAM_CENTER" };
+    case "PRACTICAL_BOOKING":
     case "PRACTICAL_EXAM":
-      return { button: "Book Practical Exam", label: "Practical exam appointment", appointmentType: "PRACTICAL_EXAM", centerType: "PRACTICAL_EXAM" };
+      return { button: "Book Practical Exam", buttonAr: "حجز الامتحان العملي", label: "Practical exam appointment", labelAr: "موعد الامتحان العملي", appointmentType: "PRACTICAL_EXAM", centerType: "PRACTICAL_EXAM_CENTER" };
     default:
       return null;
   }
+}
+
+function translateStepStatus(status: string, language: "en" | "ar") {
+  if (language === "en") return status;
+  const map: Record<string, string> = {
+    PENDING: "قيد الانتظار",
+    ACTIVE: "قيد الإجراء",
+    COMPLETED: "مكتمل",
+    FAILED: "فشل / مرفوض",
+    SKIPPED: "تم تجاوزه",
+  };
+  return map[status] ?? status;
 }

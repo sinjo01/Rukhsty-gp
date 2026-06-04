@@ -49,10 +49,14 @@ export function requireAnyOfficerOrAdmin(req: Request, res: Response, next: Next
   const officerRoles = [
     "ADMIN",
     "TRAINING_CENTER_OFFICER",
+    "MEDICAL_OFFICER",
     "MEDICAL_CENTER_OFFICER",
+    "THEORY_OFFICER",
     "THEORY_EXAM_OFFICER",
+    "PRACTICAL_OFFICER",
     "PRACTICAL_EXAM_OFFICER",
     "DVLD_OFFICER",
+    "SECURITY_OFFICER",
   ];
   if (!user || !officerRoles.includes(user.role)) {
     res.status(403).json({ message: "Forbidden" });

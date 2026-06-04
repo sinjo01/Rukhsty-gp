@@ -639,6 +639,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/MedicalTest"
 
+  /officer/applications/search:
+    get:
+      operationId: searchOfficerApplications
+      tags: [officer]
+      parameters:
+        - name: nationalId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching active applications for the officer stage
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationWithUser"
+
   /officer/exams/record:
     post:
       operationId: recordExam
@@ -652,6 +672,24 @@ paths:
       responses:
         "201":
           description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
+
+  /officer/practical/record:
+    post:
+      operationId: recordPracticalExamChecklist
+      tags: [officer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordPracticalExamBody"
+      responses:
+        "201":
+          description: Practical exam recorded
           content:
             application/json:
               schema:
@@ -730,6 +768,145 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Application"
+
+  /admin/applications/{id}/security/approve:
+    post:
+      operationId: approveSecurityReview
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Security review approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /admin/applications/{id}/security/reject:
+    post:
+      operationId: rejectSecurityReview
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rejectionReason:
+                  type: string
+              required: [rejectionReason]
+      responses:
+        "200":
+          description: Security review rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /admin/applications/{id}/request-more-info:
+    post:
+      operationId: requestMoreInfo
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      responses:
+        "200":
+          description: More information requested
+
+  /security/applications/{id}/approve:
+    post:
+      operationId: securityOfficerApproveApplication
+      tags: [security]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Security review approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /security/applications/{id}/reject:
+    post:
+      operationId: securityOfficerRejectApplication
+      tags: [security]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rejectionReason:
+                  type: string
+              required: [rejectionReason]
+      responses:
+        "200":
+          description: Security review rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /security/applications/{id}/request-more-info:
+    post:
+      operationId: securityOfficerRequestMoreInfo
+      tags: [security]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+                message:
+                  type: string
+      responses:
+        "200":
+          description: More information requested
 
   /admin/users:
     get:
@@ -896,7 +1073,7 @@ components:
           type: string
         role:
           type: string
-          enum: [USER, ADMIN, TRAINING_CENTER_OFFICER, MEDICAL_CENTER_OFFICER, THEORY_EXAM_OFFICER, PRACTICAL_EXAM_OFFICER, DVLD_OFFICER]
+          enum: [USER, ADMIN, TRAINING_CENTER_OFFICER, MEDICAL_CENTER_OFFICER, THEORY_EXAM_OFFICER, PRACTICAL_EXAM_OFFICER, DVLD_OFFICER, SECURITY_OFFICER]
         isEmailVerified:
           type: boolean
         isActive:
@@ -1411,7 +1588,7 @@ components:
           nullable: true
         result:
           type: string
-          enum: [PASS_NO_GLASSES, PASS_WITH_GLASSES, FAILED_NOT_ALLOWED, NEEDS_RECHECK]
+          enum: [DOES_NOT_NEED_GLASSES, NEEDS_GLASSES, NOT_FIT_TO_DRIVE, PASS_NO_GLASSES, PASS_WITH_GLASSES, FAILED_NOT_ALLOWED, NEEDS_RECHECK]
         leftEyeScore:
           type: string
           nullable: true
@@ -1447,7 +1624,7 @@ components:
           type: boolean
         notes:
           type: string
-      required: [applicationId, result, requiresGlasses, isAllowedToDrive]
+      required: [applicationId, result]
 
     # EXAMS
     Exam:
@@ -1502,6 +1679,34 @@ components:
         notes:
           type: string
       required: [applicationId, examType, result]
+
+    RecordPracticalExamBody:
+      type: object
+      properties:
+        applicationId:
+          type: string
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              labelEn:
+                type: string
+              labelAr:
+                type: string
+              checked:
+                type: boolean
+            required: [key, checked]
+        score:
+          type: number
+        result:
+          type: string
+          enum: [PASSED, FAILED]
+        notes:
+          type: string
+      required: [applicationId, checklist]
 
     # LICENSES
     DrivingLicense:

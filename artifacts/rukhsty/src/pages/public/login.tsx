@@ -22,12 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 const DEMO_ACCOUNTS = [
-  { label: "Admin", email: "admin@rukhsty.jo", nationalId: "9876543210", password: "Admin123!" },
-  { label: "User", email: "user@rukhsty.jo", nationalId: "9876543210", password: "User123!" },
-  { label: "Training Officer", email: "training.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
-  { label: "Medical Officer", email: "medical.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
-  { label: "Theory Officer", email: "theory.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
-  { label: "Practical Officer", email: "practical.officer@rukhsty.jo", nationalId: "9876543210", password: "Officer123!" },
+  { label: "Admin", labelAr: "مدير النظام", email: "admin@rukhsty.jo", nationalId: "9000000001", password: "password123" },
+  { label: "User", labelAr: "مستخدم", email: "user@rukhsty.jo", nationalId: "9876543210", password: "password123" },
+  { label: "Security Officer", labelAr: "موظف المراجعة الأمنية", email: "security.officer@rukhsty.jo", nationalId: "9999999991", password: "password123" },
+  { label: "Medical Officer", labelAr: "موظف الفحص الطبي", email: "medical.officer@rukhsty.jo", nationalId: "9900000002", password: "password123" },
+  { label: "Theory Officer", labelAr: "موظف الامتحان النظري", email: "theory.officer@rukhsty.jo", nationalId: "9900000003", password: "password123" },
+  { label: "Practical Officer", labelAr: "موظف الامتحان العملي", email: "practical.officer@rukhsty.jo", nationalId: "9900000004", password: "password123" },
 ];
 
 export default function Login() {
@@ -76,7 +76,9 @@ export default function Login() {
         description: t("loginSuccessDescription"),
       });
 
-      if (response.user.role === "ADMIN") {
+      if (response.user.role === "SECURITY_OFFICER") {
+        setLocation("/security/review");
+      } else if (response.user.role === "ADMIN") {
         setLocation("/admin/dashboard");
       } else if (response.user.role.includes("OFFICER")) {
         setLocation("/officer/dashboard");
@@ -181,7 +183,7 @@ export default function Login() {
                 <p className="mb-2 text-xs font-semibold text-muted-foreground">
                   {t("demoAccounts")} - {t("clickToFill")}:
                 </p>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
                   {DEMO_ACCOUNTS.map((account) => (
                     <button
                       key={account.email}
@@ -192,7 +194,7 @@ export default function Login() {
                         isRTL ? "text-right" : "text-left",
                       )}
                     >
-                      <span className="block font-medium text-foreground">{account.label}</span>
+                      <span className="block font-medium text-foreground">{isRTL ? account.labelAr : account.label}</span>
                       <span className="block truncate text-muted-foreground">{account.email}</span>
                     </button>
                   ))}

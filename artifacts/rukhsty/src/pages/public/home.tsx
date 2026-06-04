@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import {
-  Activity,
   ArrowRight,
   BadgeCheck,
   Car,
@@ -51,7 +50,6 @@ const PROCESS_STEPS: Array<{
 }> = [
   { icon: FileText, labelKey: "processRegister" },
   { icon: FileText, labelKey: "processDocuments" },
-  { icon: Activity, labelKey: "processTraining" },
   { icon: Stethoscope, labelKey: "processMedical" },
   { icon: FileText, labelKey: "processTheoryExam" },
   { icon: CarFront, labelKey: "processPracticalExam" },

@@ -196,16 +196,14 @@ export default function Profile() {
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Documents</h3>
                 <div className="space-y-3">
-                  {(["personalPhotoUrl","idFrontUrl","idBackUrl"] as const).map((f) => (
-                    <FormField key={f} control={form.control} name={f} render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">{f === "personalPhotoUrl" ? "Personal Photo URL" : f === "idFrontUrl" ? "ID Front URL" : "ID Back URL"}</FormLabel>
-                        <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
-                        {field.value && <img src={field.value} alt="preview" className="w-20 h-14 object-cover rounded border mt-1" onError={(e) => (e.currentTarget.style.display = "none")} />}
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  ))}
+                  <FormField control={form.control} name="personalPhotoUrl" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Personal Photo URL</FormLabel>
+                      <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
+                      {field.value && <img src={field.value} alt="preview" className="w-20 h-14 object-cover rounded border mt-1" onError={(e) => (e.currentTarget.style.display = "none")} />}
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
               </div>
 

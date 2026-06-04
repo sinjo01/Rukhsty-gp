@@ -1,125 +1,288 @@
-import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
-import {
-  getListApplicationsQueryKey,
-  getListServicesQueryKey,
-  getListVehiclesQueryKey,
-  useAddVehicle,
-  useCreateApplication,
-  useListServices,
-  useListVehicles,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth";
+import { useState } from "react";
+import { Link } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Car, CheckCircle2, Plus } from "lucide-react";
+import { Car, CheckCircle2, CreditCard, FileCheck2, Home, Plus, ShieldCheck } from "lucide-react";
+
+function authHeaders() {
+  return {
+    accept: "application/json",
+    "content-type": "application/json",
+    authorization: `Bearer ${localStorage.getItem("rukhsty_token") ?? ""}`,
+  };
+}
+
+async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, { ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message ?? `HTTP ${response.status}`);
+  return data;
+}
+
+type Vehicle = {
+  id: string;
+  plateNumber: string;
+  registrationNumber?: string;
+  vehicleType?: string;
+  make?: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+  manufactureYear?: number;
+  color?: string;
+  chassisNumber?: string;
+  ownerNationalId?: string;
+  registrationExpiryDate?: string;
+  currentLicenseExpiry?: string;
+  insuranceStatus?: string;
+  technicalInspectionStatus?: string;
+  status?: string;
+};
 
 export default function ServiceRenewVehicleRegistration() {
-  const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { language, isRTL } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
-  const [vehicleForm, setVehicleForm] = useState({ plateNumber: "", registrationNumber: "", vehicleType: "Private", brand: "", model: "" });
+  const [application, setApplication] = useState<any>(null);
+  const [renewedVehicle, setRenewedVehicle] = useState<Vehicle | null>(null);
+  const [step, setStep] = useState<"select" | "payment" | "success">("select");
+  const [busy, setBusy] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({
+    plateNumber: "",
+    registrationNumber: "",
+    vehicleType: "Private",
+    make: "",
+    model: "",
+    year: "",
+    color: "",
+    chassisNumber: "",
+    ownerNationalId: "",
+    registrationExpiryDate: "",
+    insuranceStatus: "VALID",
+    technicalInspectionStatus: "PASSED",
+  });
 
-  const { data: vehicles, isLoading } = useListVehicles({ query: { queryKey: getListVehiclesQueryKey() } });
-  const { data: services } = useListServices({ query: { queryKey: getListServicesQueryKey() } });
-  const addVehicle = useAddVehicle();
-  const createApplication = useCreateApplication();
-  const service = useMemo(() => services?.find((item) => item.code === "RENEW_VEHICLE_REGISTRATION"), [services]);
+  const { data: vehicles, isLoading } = useQuery({ queryKey: ["vehicles"], queryFn: () => api<Vehicle[]>("/api/vehicles") });
+  const selectedVehicle = renewedVehicle ?? vehicles?.find((vehicle) => vehicle.id === selectedVehicleId);
+  const tr = {
+    title: language === "ar" ? "تجديد ترخيص المركبة" : "Renew Vehicle Registration",
+    subtitle: language === "ar" ? "جدد ترخيص مركبتك بدون الدخول في مسار رخصة القيادة." : "Renew your vehicle registration without using the driving license workflow.",
+    noVehicles: language === "ar" ? "لا توجد مركبات مسجلة. أضف مركبة للمتابعة." : "No vehicles found. Add a vehicle to continue.",
+    addVehicle: language === "ar" ? "إضافة مركبة" : "Add Vehicle",
+    selectVehicle: language === "ar" ? "اختيار المركبة" : "Select Vehicle",
+    checks: language === "ar" ? "فحص أهلية المركبة" : "Vehicle Eligibility",
+    pay: language === "ar" ? "الدفع وتجديد الترخيص" : "Pay and Renew Registration",
+    success: language === "ar" ? "تم تجديد ترخيص المركبة بنجاح." : "Vehicle registration renewed successfully.",
+  };
 
-  const handleAddVehicle = async () => {
+  const checks = selectedVehicle ? [
+    [language === "ar" ? "المركبة مسجلة باسم المستخدم" : "Vehicle belongs to current user", true],
+    [language === "ar" ? "التأمين ساري" : "Insurance is valid", selectedVehicle.insuranceStatus === "VALID"],
+    [language === "ar" ? "الفحص الفني ناجح" : "Technical inspection is valid", selectedVehicle.technicalInspectionStatus === "PASSED"],
+    [language === "ar" ? "لا توجد مخالفات مانعة" : "No blocking fines/restrictions", true],
+    [language === "ar" ? "المركبة مؤهلة للتجديد" : "Registration is eligible for renewal", true],
+  ] as const : [];
+
+  async function addVehicle() {
     if (!vehicleForm.plateNumber.trim()) {
-      toast({ variant: "destructive", title: "Plate number is required" });
+      toast({ variant: "destructive", title: language === "ar" ? "رقم اللوحة مطلوب" : "Plate number is required" });
       return;
     }
+    setBusy(true);
     try {
-      const vehicle = await addVehicle.mutateAsync({ data: vehicleForm });
+      const vehicle = await api<Vehicle>("/api/vehicles", { method: "POST", body: JSON.stringify(vehicleForm) });
       setSelectedVehicleId(vehicle.id);
-      queryClient.invalidateQueries({ queryKey: getListVehiclesQueryKey() });
-      toast({ title: "Vehicle added" });
+      await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      toast({ title: language === "ar" ? "تمت إضافة المركبة" : "Vehicle added" });
     } catch (error) {
-      toast({ variant: "destructive", title: "Could not add vehicle", description: error instanceof Error ? error.message : "Please try again." });
+      toast({ variant: "destructive", title: language === "ar" ? "تعذرت إضافة المركبة" : "Could not add vehicle", description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy(false);
     }
-  };
+  }
 
-  const handleSubmit = async () => {
-    if (!service || !selectedVehicleId) {
-      toast({ variant: "destructive", title: "Select a vehicle first" });
-      return;
-    }
+  async function startRenewal() {
+    if (!selectedVehicle) return;
+    setBusy(true);
     try {
-      const app = await createApplication.mutateAsync({
-        data: {
-          serviceId: service.id,
-          governorate: user?.profile?.governorate ?? "Amman",
-          residenceArea: user?.profile?.area ?? user?.profile?.city ?? "Amman",
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: getListApplicationsQueryKey() });
-      toast({ title: "Vehicle renewal submitted", description: "Track the renewal from your applications page." });
-      setLocation(`/applications/${app.id}`);
+      const result = await api<any>("/api/services/renew-vehicle-registration/apply", { method: "POST", body: JSON.stringify({ vehicleId: selectedVehicle.id }) });
+      setApplication(result.application);
+      if (result.application.status === "INSURANCE_REQUIRED") {
+        await api("/api/services/renew-vehicle-registration/insurance", { method: "POST", body: JSON.stringify({ vehicleId: selectedVehicle.id, applicationId: result.application.id }) });
+        await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      }
+      setStep("payment");
     } catch (error) {
-      toast({ variant: "destructive", title: "Could not submit renewal", description: error instanceof Error ? error.message : "Please try again." });
+      toast({ variant: "destructive", title: language === "ar" ? "تعذر بدء التجديد" : "Could not start renewal", description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy(false);
     }
-  };
+  }
+
+  async function payAndComplete() {
+    if (!selectedVehicle) return;
+    setBusy(true);
+    try {
+      const app = application ?? (await api<any>("/api/services/renew-vehicle-registration/apply", { method: "POST", body: JSON.stringify({ vehicleId: selectedVehicle.id }) })).application;
+      await api("/api/services/renew-vehicle-registration/pay", { method: "POST", body: JSON.stringify({ applicationId: app.id }) });
+      const result = await api<any>("/api/services/renew-vehicle-registration/complete", { method: "POST", body: JSON.stringify({ applicationId: app.id, vehicleId: selectedVehicle.id }) });
+      setApplication(result.application);
+      setRenewedVehicle(result.vehicle);
+      setStep("success");
+      await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      toast({ title: tr.success });
+    } catch (error) {
+      toast({ variant: "destructive", title: language === "ar" ? "فشل التجديد" : "Renewal failed", description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <div>
-        <h1 className="text-2xl font-bold">Renew Vehicle Registration</h1>
-        <p className="text-muted-foreground text-sm mt-1" dir="rtl">تجديد تسجيل مركبة</p>
+        <h1 className="text-2xl font-bold">{tr.title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{tr.subtitle}</p>
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Car className="w-4 h-4 text-primary" />Select Vehicle</CardTitle></CardHeader>
-        <CardContent>
-          {isLoading ? <Skeleton className="h-28" /> : (
-            <RadioGroup value={selectedVehicleId} onValueChange={setSelectedVehicleId} className="grid gap-3">
-              {vehicles?.map((vehicle) => (
-                <Label key={vehicle.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 hover:border-primary/50">
-                  <RadioGroupItem value={vehicle.id} />
-                  <div>
-                    <p className="font-medium">{vehicle.plateNumber}</p>
-                    <p className="text-xs text-muted-foreground">{[vehicle.brand, vehicle.model, vehicle.vehicleType].filter(Boolean).join(" ") || "Vehicle"}</p>
-                  </div>
-                </Label>
+      {step === "success" && renewedVehicle ? (
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardContent className="space-y-6 p-6 text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-700" />
+            <h2 className="text-2xl font-bold text-emerald-900">{tr.success}</h2>
+            <VehicleRegistrationCard vehicle={renewedVehicle} language={language} />
+            <div className="flex justify-center gap-3">
+              <Link href="/dashboard"><Button variant="outline" className="gap-2"><Home className="h-4 w-4" />{language === "ar" ? "لوحة التحكم" : "Back to Dashboard"}</Button></Link>
+              <Button variant="outline" onClick={() => window.print()}>{language === "ar" ? "طباعة" : "Print"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Car className="h-4 w-4 text-primary" />{tr.selectVehicle}</CardTitle></CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-32 rounded-xl" /> : (
+                <RadioGroup value={selectedVehicleId} onValueChange={setSelectedVehicleId} className="grid gap-3 md:grid-cols-2">
+                  {vehicles?.map((vehicle) => (
+                    <Label key={vehicle.id} className="cursor-pointer rounded-xl border p-4 hover:border-primary/50">
+                      <div className="flex items-start gap-3">
+                        <RadioGroupItem value={vehicle.id} className="mt-1" />
+                        <div>
+                          <p className="font-bold">{vehicle.plateNumber}</p>
+                          <p className="text-sm text-muted-foreground">{[vehicle.make ?? vehicle.brand, vehicle.model, vehicle.year ?? vehicle.manufactureYear].filter(Boolean).join(" ")}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{language === "ar" ? "انتهاء الترخيص" : "Expiry"}: {vehicle.registrationExpiryDate ?? vehicle.currentLicenseExpiry ?? "-"}</p>
+                        </div>
+                      </div>
+                    </Label>
+                  ))}
+                  {!vehicles?.length && <p className="text-sm text-muted-foreground">{tr.noVehicles}</p>}
+                </RadioGroup>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Plus className="h-4 w-4 text-primary" />{tr.addVehicle}</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              {[
+                ["plateNumber", language === "ar" ? "رقم اللوحة" : "Plate number"],
+                ["registrationNumber", language === "ar" ? "رقم التسجيل" : "Registration number"],
+                ["make", language === "ar" ? "الشركة المصنعة" : "Make"],
+                ["model", language === "ar" ? "الطراز" : "Model"],
+                ["year", language === "ar" ? "السنة" : "Year"],
+                ["color", language === "ar" ? "اللون" : "Color"],
+                ["chassisNumber", language === "ar" ? "رقم الشاصي" : "Chassis number"],
+                ["ownerNationalId", language === "ar" ? "الرقم الوطني للمالك" : "Owner national ID"],
+                ["registrationExpiryDate", language === "ar" ? "تاريخ انتهاء الترخيص" : "Registration expiry date"],
+              ].map(([key, label]) => (
+                <Input key={key} type={key === "registrationExpiryDate" ? "date" : "text"} placeholder={label} value={(vehicleForm as any)[key]} onChange={(event) => setVehicleForm((form) => ({ ...form, [key]: event.target.value }))} />
               ))}
-              {!vehicles?.length && <p className="text-sm text-muted-foreground">No vehicles found. Add one below to continue.</p>}
-            </RadioGroup>
+              <Button variant="outline" className="sm:col-span-2" onClick={addVehicle} disabled={busy}>{tr.addVehicle}</Button>
+            </CardContent>
+          </Card>
+
+          {selectedVehicle && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><FileCheck2 className="h-4 w-4 text-primary" />{tr.checks}</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                {checks.map(([label, ok]) => (
+                  <div key={label} className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+                    <span className="text-sm">{label}</span>
+                    <Badge className={ok ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>{ok ? (language === "ar" ? "تم التحقق" : "Checked") : (language === "ar" ? "مطلوب" : "Required")}</Badge>
+                  </div>
+                ))}
+                <Button className="sm:col-span-2 gap-2" onClick={startRenewal} disabled={busy || step === "payment"}><ShieldCheck className="h-4 w-4" />{language === "ar" ? "تأكيد الأهلية" : "Confirm Eligibility"}</Button>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-primary" />Add Vehicle</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <Input placeholder="Plate number" value={vehicleForm.plateNumber} onChange={(event) => setVehicleForm((form) => ({ ...form, plateNumber: event.target.value }))} />
-          <Input placeholder="Registration number" value={vehicleForm.registrationNumber} onChange={(event) => setVehicleForm((form) => ({ ...form, registrationNumber: event.target.value }))} />
-          <Input placeholder="Brand" value={vehicleForm.brand} onChange={(event) => setVehicleForm((form) => ({ ...form, brand: event.target.value }))} />
-          <Input placeholder="Model" value={vehicleForm.model} onChange={(event) => setVehicleForm((form) => ({ ...form, model: event.target.value }))} />
-          <Button variant="outline" className="sm:col-span-2" onClick={handleAddVehicle} disabled={addVehicle.isPending}>
-            {addVehicle.isPending ? "Adding..." : "Add Vehicle"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Submit Renewal</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Confirm the selected vehicle and create a renewal application for status tracking.</p>
-          <Button className="w-full gap-2" onClick={handleSubmit} disabled={!selectedVehicleId || createApplication.isPending}>
-            <CheckCircle2 className="w-4 h-4" />
-            {createApplication.isPending ? "Submitting..." : "Submit Vehicle Renewal"}
-          </Button>
-        </CardContent>
-      </Card>
+          {step === "payment" && selectedVehicle && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><CreditCard className="h-4 w-4 text-primary" />{language === "ar" ? "الدفع" : "Payment"}</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <Fee label={language === "ar" ? "رسوم تجديد الترخيص" : "Registration renewal fee"} value="30 JOD" />
+                <Fee label={language === "ar" ? "رسوم الخدمة" : "Service fee"} value="1 JOD" />
+                <Fee label={language === "ar" ? "رسوم الفحص الفني" : "Technical inspection fee"} value="5 JOD" />
+                <Fee label={language === "ar" ? "المجموع" : "Total"} value="36 JOD" strong />
+                <Button className="w-full gap-2" onClick={payAndComplete} disabled={busy}><CreditCard className="h-4 w-4" />{tr.pay}</Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
+}
+
+function VehicleRegistrationCard({ vehicle, language }: { vehicle: Vehicle; language: "en" | "ar" }) {
+  const make = vehicle.make ?? vehicle.brand ?? "-";
+  const year = vehicle.year ?? vehicle.manufactureYear ?? "-";
+  return (
+    <div className="mx-auto w-full max-w-xl overflow-hidden rounded-xl border-4 border-[#0e5c3a] bg-gradient-to-br from-[#eef9fb] to-[#d7f0ea] p-5 text-left shadow-sm" dir="ltr">
+      <div className="flex items-start justify-between border-b border-[#0e5c3a]/40 pb-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#0e5c3a]">Rukhsty DVLD</p>
+          <h3 className="text-xl font-bold text-[#0d3327]">Vehicle Registration</h3>
+        </div>
+        <div className="text-right" dir="rtl">
+          <p className="text-xs font-bold text-[#0e5c3a]">منصة رخصتي</p>
+          <h3 className="text-lg font-bold text-[#0d3327]">ترخيص المركبة</h3>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <Doc label="Plate number / رقم اللوحة" value={vehicle.plateNumber} />
+        <Doc label="Registration No / رقم التسجيل" value={vehicle.registrationNumber} />
+        <Doc label="Type / النوع" value={vehicle.vehicleType} />
+        <Doc label="Make & model / الصنع والطراز" value={`${make} ${vehicle.model ?? ""}`} />
+        <Doc label="Year / السنة" value={String(year)} />
+        <Doc label="Color / اللون" value={vehicle.color} />
+        <Doc label="Chassis No / رقم الشاصي" value={vehicle.chassisNumber} />
+        <Doc label="Owner National ID / الرقم الوطني" value={vehicle.ownerNationalId} />
+        <Doc label="Expiry / تاريخ الانتهاء" value={vehicle.registrationExpiryDate ?? vehicle.currentLicenseExpiry} />
+        <Doc label="Status / الحالة" value={vehicle.status ?? "ACTIVE"} />
+      </div>
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-white/70 p-3 text-xs text-slate-600">
+        <span>{language === "ar" ? "رمز تحقق تجريبي" : "Verification placeholder"}</span>
+        <span className="font-mono">QR-{vehicle.id?.slice(0, 8)}</span>
+      </div>
+    </div>
+  );
+}
+
+function Doc({ label, value }: { label: string; value?: string | null }) {
+  return <div className="rounded-lg border border-[#0e5c3a]/25 bg-white/60 p-2"><p className="text-[10px] font-bold uppercase text-[#0e5c3a]">{label}</p><p className="text-sm font-semibold text-slate-900">{value ?? "-"}</p></div>;
+}
+
+function Fee({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return <div className={`flex justify-between rounded-lg border p-3 ${strong ? "bg-emerald-50 font-bold text-emerald-900" : ""}`}><span>{label}</span><span>{value}</span></div>;
 }

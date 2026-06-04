@@ -41,7 +41,10 @@ const passwordRules = [
 ] as const;
 
 type RegisterFormValues = {
-  fullName: string;
+  firstName: string;
+  secondName: string;
+  thirdName: string;
+  familyName: string;
   nationalId: string;
   email: string;
   confirmEmail: string;
@@ -55,20 +58,6 @@ type RegisterFormValues = {
   confirmPassword: string;
   personalPhotoUrl: string;
 };
-
-function splitFullName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  const firstName = parts[0] ?? "";
-  const familyName = parts.length > 1 ? parts[parts.length - 1] : firstName;
-  const middle = parts.slice(1, -1);
-
-  return {
-    firstName,
-    secondName: middle[0] ?? "",
-    thirdName: middle.slice(1).join(" "),
-    familyName,
-  };
-}
 
 function calculateAge(dateOfBirth: string) {
   const birthDate = new Date(`${dateOfBirth}T00:00:00`);
@@ -106,7 +95,10 @@ export default function Register() {
     () =>
       z
         .object({
-          fullName: z.string().trim().min(3, t("validationRequired")),
+          firstName: z.string().trim().min(1, t("validationRequired")),
+          secondName: z.string().trim().min(1, t("validationRequired")),
+          thirdName: z.string().trim().min(1, t("validationRequired")),
+          familyName: z.string().trim().min(1, t("validationRequired")),
           nationalId: z.string().regex(/^\d{10}$/, t("validationNationalId")),
           email: z.string().email(t("validationEmail")),
           confirmEmail: z.string().email(t("validationEmail")),
@@ -141,7 +133,10 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
     mode: "onChange",
     defaultValues: {
-      fullName: "",
+      firstName: "",
+      secondName: "",
+      thirdName: "",
+      familyName: "",
       nationalId: "",
       email: "",
       confirmEmail: "",
@@ -186,10 +181,13 @@ export default function Register() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      const nameParts = splitFullName(values.fullName);
+      const fullName = [values.firstName, values.secondName, values.thirdName, values.familyName].map((part) => part.trim()).join(" ");
       const payload = {
-        fullName: values.fullName.trim(),
-        ...nameParts,
+        fullName,
+        firstName: values.firstName.trim(),
+        secondName: values.secondName.trim(),
+        thirdName: values.thirdName.trim(),
+        familyName: values.familyName.trim(),
         age: calculateAge(values.dateOfBirth),
         nationalId: values.nationalId,
         email: values.email.trim().toLowerCase(),
@@ -204,10 +202,9 @@ export default function Register() {
         personalPhotoUrl: values.personalPhotoUrl,
       };
 
-      const response = await registerMutation.mutateAsync({ data: payload });
-      login(response.token, response.user);
+      await registerMutation.mutateAsync({ data: payload });
       toast({ title: t("registrationSuccessTitle"), description: t("registrationSuccessDescription") });
-      setLocation("/dashboard");
+      setLocation("/login");
     } catch {
       toast({ variant: "destructive", title: t("registrationFailedTitle"), description: t("registrationFailedDescription") });
     }
@@ -253,19 +250,22 @@ export default function Register() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                   <FormSection icon={UserRound} title={t("personalInformation")}>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>{t("fullName")}</FormLabel>
-                            <FormControl>
-                              <Input placeholder={t("fullNamePlaceholder")} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {(["firstName", "secondName", "thirdName", "familyName"] as const).map((fieldName) => (
+                        <FormField
+                          key={fieldName}
+                          control={form.control}
+                          name={fieldName}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t(fieldName)}</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ))}
                       <FormField
                         control={form.control}
                         name="nationalId"

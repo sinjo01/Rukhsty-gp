@@ -15,6 +15,15 @@ import { FileText, CheckCircle, XCircle, Clock } from "lucide-react";
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700",
   PROFILE_SUBMITTED: "bg-blue-100 text-blue-700",
+  SECURITY_REVIEW: "bg-blue-100 text-blue-700",
+  SECURITY_APPROVED: "bg-emerald-100 text-emerald-700",
+  SECURITY_REJECTED: "bg-red-100 text-red-700",
+  MEDICAL_BOOKING: "bg-purple-100 text-purple-700",
+  MEDICAL_APPOINTMENT_BOOKED: "bg-purple-100 text-purple-700",
+  THEORY_BOOKING: "bg-blue-100 text-blue-700",
+  THEORY_APPOINTMENT_BOOKED: "bg-blue-100 text-blue-700",
+  PRACTICAL_BOOKING: "bg-amber-100 text-amber-700",
+  PRACTICAL_APPOINTMENT_BOOKED: "bg-amber-100 text-amber-700",
   TRAINING_CENTER_SELECTED: "bg-amber-100 text-amber-700",
   TRAINING_COMPLETED: "bg-green-100 text-green-700",
   LICENSE_ISSUED: "bg-emerald-100 text-emerald-700",
@@ -37,14 +46,22 @@ export default function AdminApplications() {
 
   const handleReview = async () => {
     try {
-      const status = reviewDialog.action === "APPROVE" ? "APPROVED" : "REJECTED";
-      await reviewMutation.mutateAsync({ id: reviewDialog.id, data: { status, rejectionReason: reviewDialog.action === "REJECT" ? rejectionReason : undefined } });
+      const endpoint = reviewDialog.action === "APPROVE" ? "approve" : "reject";
+      const response = await fetch(`/api/admin/applications/${reviewDialog.id}/security/${endpoint}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${localStorage.getItem("rukhsty_token") ?? ""}`, "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ rejectionReason }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message ?? `HTTP ${response.status}`);
+      }
       queryClient.invalidateQueries({ queryKey: getListAdminApplicationsQueryKey({} as any) });
-      toast({ title: `Application ${reviewDialog.action === "APPROVE" ? "approved" : "rejected"}` });
+      toast({ title: `Security review ${reviewDialog.action === "APPROVE" ? "approved" : "rejected"}` });
       setReviewDialog({ open: false, id: "", action: "APPROVE" });
       setRejectionReason("");
-    } catch {
-      toast({ variant: "destructive", title: "Action failed" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Action failed", description: error instanceof Error ? error.message : undefined });
     }
   };
 
@@ -84,7 +101,7 @@ export default function AdminApplications() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All statuses</SelectItem>
-            {["DRAFT","PROFILE_SUBMITTED","TRAINING_CENTER_SELECTED","TRAINING_COMPLETED","LICENSE_ISSUED","REJECTED"].map((s) => (
+            {["SECURITY_REVIEW","SECURITY_APPROVED","MEDICAL_BOOKING","MEDICAL_APPOINTMENT_BOOKED","MEDICAL_PASSED","THEORY_BOOKING","THEORY_APPOINTMENT_BOOKED","THEORY_PASSED","PRACTICAL_BOOKING","PRACTICAL_APPOINTMENT_BOOKED","PRACTICAL_PASSED","LICENSE_ISSUANCE","LICENSE_ISSUED","SECURITY_REJECTED","REJECTED"].map((s) => (
               <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
             ))}
           </SelectContent>
@@ -105,13 +122,16 @@ export default function AdminApplications() {
                     </div>
                     <div>
                       <p className="font-mono text-sm font-semibold">{app.applicationNumber}</p>
+                      <p className="text-sm font-medium">{[app.profile?.firstName, app.profile?.secondName, app.profile?.thirdName, app.profile?.familyName].filter(Boolean).join(" ") || app.user?.email || "Citizen"}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <Badge className={`text-xs ${STATUS_COLORS[app.status] ?? "bg-slate-100 text-slate-700"}`}>{app.status?.replace(/_/g, " ")}</Badge>
+                        {app.profile?.nationalId && <span className="text-xs text-muted-foreground font-mono">{app.profile.nationalId}</span>}
+                        {app.licenseCategory?.code && <span className="text-xs text-muted-foreground">{app.licenseCategory.code}</span>}
                         <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(app.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
-                  {["PROFILE_SUBMITTED","TRAINING_COMPLETED"].includes(app.status) && (
+                  {app.status === "SECURITY_REVIEW" && (
                     <div className="flex gap-2">
                       <Button size="sm" className="text-xs h-7 bg-green-600 hover:bg-green-700 gap-1" onClick={() => setReviewDialog({ open: true, id: app.id, action: "APPROVE" })} data-testid={`btn-approve-${app.id}`}>
                         <CheckCircle className="w-3 h-3" />Approve

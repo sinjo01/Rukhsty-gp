@@ -46,7 +46,7 @@ router.post("/auth/register", async (req, res) => {
   const idFrontUrl = toCleanString(req.body.idFrontUrl);
   const idBackUrl = toCleanString(req.body.idBackUrl);
 
-  if (!email || !password || !firstName || !familyName || !nationalId || !phone || !dateOfBirth || !gender || !governorate || !address) {
+  if (!email || !password || !firstName || !secondName || !thirdName || !familyName || !nationalId || !phone || !dateOfBirth || !gender || !governorate || !address || !personalPhotoUrl) {
     res.status(400).json({ message: "Required registration fields are missing" });
     return;
   }
@@ -99,8 +99,7 @@ router.post("/auth/register", async (req, res) => {
     idBackUrl,
     profileStatus: "COMPLETE",
   });
-  const token = generateToken({ userId: user.id, email: user.email, role: user.role });
-  res.status(201).json({ token, user: { id: user.id, email: user.email, role: user.role } });
+  res.status(201).json({ message: "Account created. Please log in.", user: { id: user.id, email: user.email, role: user.role } });
 });
 
 router.post("/auth/login", async (req, res) => {
