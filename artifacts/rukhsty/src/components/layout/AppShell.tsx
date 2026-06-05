@@ -12,7 +12,8 @@ import {
   Bell,
   LogOut,
   Building2,
-  Users
+  Users,
+  Languages
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
@@ -93,30 +94,50 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
   const navItems = getNavItems();
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-50 dark:bg-background">
+    <div className="flex min-h-screen w-full bg-muted/40 dark:bg-background">
       {/* Sidebar */}
-      <aside className={cn("w-64 bg-card border-border hidden md:flex flex-col shadow-sm z-10", isRTL ? "border-l" : "border-r")}>
-        <div className="h-16 flex items-center px-6 border-b border-border">
+      <aside className={cn("w-64 bg-card/80 backdrop-blur-xl border-border hidden md:flex flex-col z-10", isRTL ? "border-l" : "border-r")}>
+        <div className="h-16 flex items-center px-6 border-b border-border/70">
           <Link href="/">
             <Logo label={t("brandName")} markClassName="h-6 w-6" textClassName="text-lg" />
           </Link>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                location.startsWith(item.href) && item.href !== '/' || location === item.href 
-                  ? "bg-primary/10 text-primary font-medium" 
-                  : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground"
-              }`}>
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </div>
-            </Link>
-          ))}
+        <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1.5">
+          {navItems.map((item) => {
+            const isActive =
+              (location.startsWith(item.href) && item.href !== "/") || location === item.href;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={cn(
+                    "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200",
+                    isActive
+                      ? "bg-gradient-to-r from-primary to-[#13456e] text-primary-foreground shadow-lg shadow-primary/25"
+                      : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
+                  )}
+                >
+                  {isActive && (
+                    <span
+                      className={cn(
+                        "absolute top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-accent",
+                        isRTL ? "right-0 translate-x-1" : "left-0 -translate-x-1",
+                      )}
+                    />
+                  )}
+                  <item.icon
+                    className={cn(
+                      "w-5 h-5 shrink-0 transition-colors",
+                      isActive ? "text-accent" : "text-muted-foreground group-hover:text-primary",
+                    )}
+                  />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+              </Link>
+            );
+          })}
         </nav>
-          <div className="p-4 border-t border-border">
-          <Button variant="ghost" className={cn("w-full text-muted-foreground hover:text-destructive", isRTL ? "justify-end" : "justify-start")} onClick={handleLogout}>
+        <div className="p-4 border-t border-border/70">
+          <Button variant="ghost" className={cn("w-full rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive", isRTL ? "justify-end" : "justify-start")} onClick={handleLogout}>
             <LogOut className={cn("w-5 h-5", isRTL ? "ml-2" : "mr-2")} />
             {t("logout")}
           </Button>
@@ -125,32 +146,37 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Navbar */}
-        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20 shadow-sm">
+        <header className="h-16 bg-card/70 backdrop-blur-xl border-b border-border/70 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
           <div className="flex items-center md:hidden">
             <Link href="/">
               <Logo label={t("brandName")} markClassName="h-6 w-6" />
             </Link>
           </div>
-          
+
           <div className="flex-1" />
 
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={toggleLanguage}>
-              {t("languageToggle")}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button variant="ghost" size="sm" className="h-9 rounded-full px-3 text-muted-foreground hover:text-foreground" onClick={toggleLanguage}>
+              <Languages className="w-4 h-4" />
+              <span className="ms-1.5">{t("languageToggle")}</span>
             </Button>
             <NotificationBell />
-            
+
+            <div className={cn("hidden sm:block h-8 w-px bg-border", isRTL ? "ms-1" : "me-1")} />
+
             <div className="flex items-center gap-3">
               <div className={cn("hidden sm:block", isRTL ? "text-left" : "text-right")}>
-                <p className="text-sm font-medium leading-none">{user?.profile?.firstName || user?.email}</p>
-                <p className="text-xs text-muted-foreground">{user?.role}</p>
+                <p className="text-sm font-semibold leading-none">{user?.profile?.firstName || user?.email}</p>
+                <p className="text-xs text-muted-foreground mt-1 capitalize">{user?.role?.toLowerCase().replace(/_/g, " ")}</p>
               </div>
-              <Avatar className="w-9 h-9 border border-primary/20">
-                <AvatarImage src={user?.profile?.personalPhotoUrl || undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  {user?.profile?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
+              <div className="rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shadow-sm">
+                <Avatar className="w-9 h-9 border-2 border-card">
+                  <AvatarImage src={user?.profile?.personalPhotoUrl || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                    {user?.profile?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
             </div>
           </div>
         </header>

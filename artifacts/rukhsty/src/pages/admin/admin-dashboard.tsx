@@ -22,13 +22,13 @@ export default function AdminDashboard() {
   const s = stats as any;
 
   const statCards = [
-    { label: "Total Applications", value: s?.totalApplications ?? 0, icon: FileText, color: "text-blue-600 bg-blue-50 dark:bg-blue-950/30" },
-    { label: "Pending Review", value: s?.pendingReview ?? 0, icon: TrendingUp, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/30" },
-    { label: "Citizens", value: s?.totalCitizens ?? 0, icon: Users, color: "text-purple-600 bg-purple-50 dark:bg-purple-950/30" },
-    { label: "Centers", value: s?.totalCenters ?? 0, icon: Building2, color: "text-green-600 bg-green-50 dark:bg-green-950/30" },
-    { label: "Licenses Issued", value: s?.licensesIssued ?? 0, icon: CreditCard, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" },
-    { label: "Exams Passed", value: s?.passedExamsCount ?? 0, icon: Award, color: "text-green-600 bg-green-50 dark:bg-green-950/30" },
-    { label: "Exams Failed", value: s?.failedExamsCount ?? 0, icon: XCircle, color: "text-red-600 bg-red-50 dark:bg-red-950/30" },
+    { label: "Total Applications", value: s?.totalApplications ?? 0, icon: FileText, gradient: "from-sky-500 to-blue-600" },
+    { label: "Pending Review", value: s?.pendingReview ?? 0, icon: TrendingUp, gradient: "from-amber-500 to-orange-600" },
+    { label: "Citizens", value: s?.totalCitizens ?? 0, icon: Users, gradient: "from-violet-500 to-purple-600" },
+    { label: "Centers", value: s?.totalCenters ?? 0, icon: Building2, gradient: "from-emerald-500 to-teal-600" },
+    { label: "Licenses Issued", value: s?.licensesIssued ?? 0, icon: CreditCard, gradient: "from-teal-500 to-emerald-600" },
+    { label: "Exams Passed", value: s?.passedExamsCount ?? 0, icon: Award, gradient: "from-green-500 to-emerald-600" },
+    { label: "Exams Failed", value: s?.failedExamsCount ?? 0, icon: XCircle, gradient: "from-rose-500 to-red-600" },
   ];
 
   const statusData = (s?.applicationsByStatus ?? []).map((item: any) => ({ name: item.status?.replace(/_/g, " "), value: item.count }));
@@ -43,10 +43,10 @@ export default function AdminDashboard() {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statCards.slice(0, 4).map((stat, i) => (
-          <Card key={i}>
+          <Card key={i} className="rounded-2xl border-border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
             <CardContent className="p-5">
-              <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center mb-3`}>
-                <stat.icon className="w-5 h-5" />
+              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-3 shadow-lg`}>
+                <stat.icon className="w-5 h-5 text-white" />
               </div>
               <p className="text-2xl font-bold">{stat.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
@@ -57,10 +57,10 @@ export default function AdminDashboard() {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {statCards.slice(4).map((stat, i) => (
-          <Card key={i}>
+          <Card key={i} className="rounded-2xl border-border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
             <CardContent className="p-4">
-              <div className={`w-8 h-8 rounded-lg ${stat.color} flex items-center justify-center mb-2`}>
-                <stat.icon className="w-4 h-4" />
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-2 shadow-md`}>
+                <stat.icon className="w-4 h-4 text-white" />
               </div>
               <p className="text-xl font-bold">{stat.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>

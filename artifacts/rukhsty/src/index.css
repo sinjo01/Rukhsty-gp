@@ -199,6 +199,89 @@
   @apply bg-white/10 dark:bg-black/20 backdrop-blur-lg border border-white/20 dark:border-white/10 shadow-xl;
 }
 
+/* ── Premium landing visuals ──────────────────────────────────────────── */
+
+/* Subtle dotted grid used behind hero / CTA sections */
+.bg-grid {
+  background-image: radial-gradient(
+    circle at center,
+    hsl(var(--primary) / 0.07) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Coloured aurora blobs that softly light up the hero */
+.hero-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+.hero-aurora::before,
+.hero-aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.55;
+}
+.hero-aurora::before {
+  width: 38rem;
+  height: 38rem;
+  top: -14rem;
+  left: -10rem;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.45), transparent 65%);
+}
+.hero-aurora::after {
+  width: 32rem;
+  height: 32rem;
+  top: -8rem;
+  right: -8rem;
+  background: radial-gradient(circle, hsl(var(--accent) / 0.40), transparent 65%);
+}
+.dark .hero-aurora::before,
+.dark .hero-aurora::after {
+  opacity: 0.35;
+}
+
+/* Brand gradient text */
+.text-gradient-brand {
+  background-image: linear-gradient(
+    120deg,
+    hsl(var(--primary)),
+    hsl(var(--accent))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Gentle float for the hero showcase card */
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float-soft {
+  animation: float-soft 6s ease-in-out infinite;
+}
+
+/* Conic sheen used on the license showcase card */
+.card-sheen {
+  background:
+    linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(210 73% 22%) 55%, hsl(210 60% 30%) 100%);
+}
+.card-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 78% 18%, hsl(var(--accent) / 0.45), transparent 45%);
+  pointer-events: none;
+}
+
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;

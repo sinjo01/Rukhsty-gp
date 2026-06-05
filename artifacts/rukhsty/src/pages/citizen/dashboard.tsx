@@ -8,15 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { FileText, Calendar, Bell, CreditCard, ArrowRight, Shield, Clock } from "lucide-react";
+import { FileText, Calendar, Bell, CreditCard, ArrowRight, Clock, IdCard, RefreshCw, Car } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 import { currentStepLabel, isMedicalBookingRequired, isPracticalBookingRequired, isTheoryBookingRequired, STATUS_COLORS, statusLabel } from "./application-utils";
 import { DigitalLicenseCard } from "./digital-license-card";
 
 const SERVICES = [
-  { title: "Issue Driving License", titleAr: "استخراج رخصة قيادة", href: "/services/issue-driving-license", icon: CreditCard, description: "Apply for a new driving license" },
-  { title: "Renew License", titleAr: "تجديد الرخصة", href: "/services/renew-driving-license", icon: Shield, description: "Renew your existing license" },
-  { title: "Vehicle Registration", titleAr: "تجديد ترخيص المركبة", href: "/services/renew-vehicle-registration", icon: FileText, description: "Renew vehicle registration" },
+  { title: "Issue Driving License", titleAr: "استخراج رخصة قيادة", href: "/services/issue-driving-license", icon: IdCard, description: "Apply for a new driving license", gradient: "from-emerald-500 to-teal-600", glow: "bg-emerald-500/20" },
+  { title: "Renew License", titleAr: "تجديد الرخصة", href: "/services/renew-driving-license", icon: RefreshCw, description: "Renew your existing license", gradient: "from-sky-500 to-indigo-600", glow: "bg-sky-500/20" },
+  { title: "Vehicle Registration", titleAr: "تجديد ترخيص المركبة", href: "/services/renew-vehicle-registration", icon: Car, description: "Renew vehicle registration", gradient: "from-amber-500 to-orange-600", glow: "bg-amber-500/20" },
 ];
 
 export default function Dashboard() {
@@ -68,16 +69,16 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {(
           [
-            { label: language === "ar" ? "الطلبات" : "Applications", value: summary?.totalApplications ?? 0, icon: FileText, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
-            { label: language === "ar" ? "المواعيد" : "Appointments", value: summary?.upcomingAppointments ?? 0, icon: Calendar, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/30" },
-            { label: language === "ar" ? "الإشعارات" : "Notifications", value: summary?.unreadNotifications ?? 0, icon: Bell, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
-            { label: language === "ar" ? "الرخصة" : "License", value: hasIssuedLicense ? (language === "ar" ? "سارية" : "Active") : (language === "ar" ? "لا يوجد" : "None"), icon: CreditCard, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/30" },
-          ] as Array<{ label: string; value: React.ReactNode; icon: React.ComponentType<{ className?: string }>; color: string; bg: string }>
+            { label: language === "ar" ? "الطلبات" : "Applications", value: summary?.totalApplications ?? 0, icon: FileText, gradient: "from-sky-500 to-blue-600" },
+            { label: language === "ar" ? "المواعيد" : "Appointments", value: summary?.upcomingAppointments ?? 0, icon: Calendar, gradient: "from-emerald-500 to-teal-600" },
+            { label: language === "ar" ? "الإشعارات" : "Notifications", value: summary?.unreadNotifications ?? 0, icon: Bell, gradient: "from-amber-500 to-orange-600" },
+            { label: language === "ar" ? "الرخصة" : "License", value: hasIssuedLicense ? (language === "ar" ? "سارية" : "Active") : (language === "ar" ? "لا يوجد" : "None"), icon: CreditCard, gradient: "from-violet-500 to-purple-600" },
+          ] as Array<{ label: string; value: React.ReactNode; icon: React.ComponentType<{ className?: string }>; gradient: string }>
         ).map((stat, i) => (
-          <Card key={i} className="border-border">
+          <Card key={i} className="rounded-2xl border-border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
             <CardContent className="p-4">
-              <div className={`w-9 h-9 rounded-lg ${stat.bg} flex items-center justify-center mb-3`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3 shadow-sm", stat.gradient, isRTL && "ml-auto")}>
+                <stat.icon className="w-5 h-5 text-white" />
               </div>
               <p className="text-2xl font-bold text-foreground">{stat.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
@@ -261,18 +262,23 @@ export default function Dashboard() {
 
       {/* Services */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <h2 className="text-lg font-semibold mb-4">Available Services</h2>
+        <h2 className="text-lg font-semibold mb-4">{language === "ar" ? "الخدمات المتاحة" : "Available Services"}</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {SERVICES.map((svc, i) => (
             <Link key={i} href={svc.href}>
-              <Card className="hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group">
-                <CardContent className="p-5">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                    <svc.icon className="w-5 h-5 text-primary" />
+              <Card className="group relative h-full overflow-hidden rounded-2xl border-border cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
+                <div className={cn("pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100", svc.glow)} />
+                <CardContent className="relative p-5">
+                  <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition-transform duration-300 group-hover:scale-105", svc.gradient, isRTL && "ml-auto")}>
+                    <svc.icon className="w-6 h-6" />
                   </div>
-                  <p className="font-semibold text-sm">{svc.title}</p>
+                  <p className="mt-4 font-semibold text-sm">{svc.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5" dir="rtl">{svc.titleAr}</p>
                   <p className="text-xs text-muted-foreground mt-2">{svc.description}</p>
+                  <span className={cn("mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary opacity-0 transition-all duration-300 group-hover:opacity-100", isRTL && "flex-row-reverse")}>
+                    {language === "ar" ? "ابدأ الخدمة" : "Start service"}
+                    <ArrowRight className={cn("w-3.5 h-3.5", isRTL && "rotate-180")} />
+                  </span>
                 </CardContent>
               </Card>
             </Link>

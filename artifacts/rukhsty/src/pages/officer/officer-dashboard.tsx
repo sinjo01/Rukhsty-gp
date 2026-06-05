@@ -490,18 +490,18 @@ export default function OfficerDashboard() {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
-          { label: language === "ar" ? "مواعيد اليوم" : "Today's Appointments", value: d?.todayAppointments ?? 0, icon: Calendar, color: "border-blue-100 bg-blue-50 text-blue-700" },
-          { label: language === "ar" ? "قيد الانتظار" : "Pending", value: d?.pendingAppointments ?? 0, icon: Clock, color: "border-amber-100 bg-amber-50 text-amber-700" },
-          { label: language === "ar" ? "مكتملة اليوم" : "Completed Today", value: d?.completedToday ?? 0, icon: CheckCircle, color: "border-emerald-100 bg-emerald-50 text-emerald-700" },
+          { label: language === "ar" ? "مواعيد اليوم" : "Today's Appointments", value: d?.todayAppointments ?? 0, icon: Calendar, gradient: "from-sky-500 to-blue-600" },
+          { label: language === "ar" ? "قيد الانتظار" : "Pending", value: d?.pendingAppointments ?? 0, icon: Clock, gradient: "from-amber-500 to-orange-600" },
+          { label: language === "ar" ? "مكتملة اليوم" : "Completed Today", value: d?.completedToday ?? 0, icon: CheckCircle, gradient: "from-emerald-500 to-teal-600" },
         ].map((stat, i) => (
-          <Card key={i} className="border-slate-200">
+          <Card key={i} className="rounded-2xl border-border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
             <CardContent className="flex items-center justify-between p-4">
               <div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
                 <p className="mt-1 text-3xl font-bold">{stat.value}</p>
               </div>
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg ${stat.gradient}`}>
+                <stat.icon className="h-6 w-6" />
               </div>
             </CardContent>
           </Card>
