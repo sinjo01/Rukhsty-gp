@@ -15,6 +15,7 @@ import {
   Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLogout, useListNotifications } from "@workspace/api-client-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -96,9 +97,8 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
       {/* Sidebar */}
       <aside className={cn("w-64 bg-card border-border hidden md:flex flex-col shadow-sm z-10", isRTL ? "border-l" : "border-r")}>
         <div className="h-16 flex items-center px-6 border-b border-border">
-          <Link href="/" className="flex items-center gap-2 text-primary">
-            <Shield className="w-6 h-6" />
-            <span className="font-bold text-lg">{t("brandName")}</span>
+          <Link href="/">
+            <Logo label={t("brandName")} markClassName="h-6 w-6" textClassName="text-lg" />
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
@@ -127,9 +127,8 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
         {/* Navbar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20 shadow-sm">
           <div className="flex items-center md:hidden">
-            <Link href="/" className="flex items-center gap-2 text-primary">
-              <Shield className="w-6 h-6" />
-              <span className="font-bold">{t("brandName")}</span>
+            <Link href="/">
+              <Logo label={t("brandName")} markClassName="h-6 w-6" />
             </Link>
           </div>
           

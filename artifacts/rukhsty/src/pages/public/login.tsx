@@ -3,7 +3,8 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { IdCard, LogIn, Mail, Shield } from "lucide-react";
+import { IdCard, LogIn, Mail } from "lucide-react";
+import { Logo, LogoMark } from "@/components/logo";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -98,9 +99,8 @@ export default function Login() {
     <div className="min-h-screen bg-slate-50 dark:bg-background">
       <header className="h-16 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 text-primary">
-            <Shield className="h-7 w-7" />
-            <span className="text-xl font-bold tracking-tight">{t("brandName")}</span>
+          <Link href="/">
+            <Logo label={t("brandName")} markClassName="h-7 w-7" textClassName="text-xl" />
           </Link>
           <Button variant="outline" size="sm" onClick={toggleLanguage}>
             {t("languageToggle")}
@@ -111,7 +111,7 @@ export default function Login() {
       <main className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
         <section className={cn("rounded-2xl bg-primary p-8 text-white shadow-xl", isRTL && "lg:order-2")}>
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
-            <Shield className="h-7 w-7 text-accent" />
+            <LogoMark tone="onDark" className="h-7 w-7" />
           </div>
           <h1 className="mt-8 text-3xl font-bold leading-tight">{t("signInTitle")}</h1>
           <p className="mt-4 leading-relaxed text-white/75">{t("signInDescription")}</p>

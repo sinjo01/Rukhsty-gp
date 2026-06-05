@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRegister } from "@workspace/api-client-react";
+import { Logo, LogoMark } from "@/components/logo";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -214,9 +215,8 @@ export default function Register() {
     <div className="min-h-screen bg-slate-50 dark:bg-background">
       <header className="h-16 border-b bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 text-primary">
-            <Shield className="h-7 w-7" />
-            <span className="text-xl font-bold tracking-tight">{t("brandName")}</span>
+          <Link href="/">
+            <Logo label={t("brandName")} markClassName="h-7 w-7" textClassName="text-xl" />
           </Link>
           <Button variant="outline" size="sm" onClick={toggleLanguage}>
             {t("languageToggle")}
@@ -227,7 +227,7 @@ export default function Register() {
       <main className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:py-12">
         <aside className={cn("rounded-2xl bg-primary p-8 text-white shadow-xl lg:sticky lg:top-24 lg:h-fit", isRTL && "lg:order-2")}>
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
-            <Shield className="h-7 w-7 text-accent" />
+            <LogoMark tone="onDark" className="h-7 w-7" />
           </div>
           <h1 className="mt-8 text-3xl font-bold leading-tight">{t("createAccountTitle")}</h1>
           <p className="mt-4 leading-relaxed text-white/75">{t("createAccountDescription")}</p>

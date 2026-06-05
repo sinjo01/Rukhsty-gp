@@ -8,10 +8,10 @@ import {
   ChevronRight,
   FileText,
   RefreshCw,
-  Shield,
   Stethoscope,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -64,10 +64,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 dark:bg-background flex flex-col font-sans">
       <header className="h-16 border-b bg-card/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-primary">
-            <Shield className="w-6 h-6" />
-            <span className="font-bold text-xl tracking-tight">{t("brandName")}</span>
-          </div>
+          <Logo label={t("brandName")} markClassName="h-6 w-6" textClassName="text-xl" />
 
           <div className="flex items-center gap-3 sm:gap-4">
             <Button variant="outline" size="sm" className="h-8 px-3" onClick={toggleLanguage}>
@@ -205,10 +202,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           <div className="grid gap-10 md:grid-cols-3">
             <div>
-              <div className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-accent" />
-                <span className="text-lg font-bold">{t("brandName")}</span>
-              </div>
+              <Logo label={t("brandName")} tone="onDark" markClassName="h-6 w-6" textClassName="text-lg" />
               <p className="mt-3 text-sm text-white/70">{t("footerTagline")}</p>
             </div>
 
