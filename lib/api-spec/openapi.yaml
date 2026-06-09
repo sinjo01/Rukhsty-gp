@@ -1218,17 +1218,28 @@ components:
     # APPLICATIONS
     CreateApplicationBody:
       type: object
-      properties:
-        serviceId:
-          type: string
-        licenseCategoryId:
-          type: string
-          nullable: true
-        governorate:
-          type: string
-        residenceArea:
-          type: string
-      required: [serviceId, governorate, residenceArea]
+        properties:
+          serviceId:
+            type: string
+          licenseCategoryId:
+            type: string
+            nullable: true
+          governorate:
+            type: string
+          residenceArea:
+            type: string
+          trainingCertificate:
+            type: object
+            description: Required image document when creating a first-time driving license application.
+            properties:
+              fileUrl:
+                type: string
+              fileName:
+                type: string
+              mimeType:
+                type: string
+            required: [fileUrl, fileName, mimeType]
+        required: [serviceId, governorate, residenceArea]
 
     Application:
       type: object

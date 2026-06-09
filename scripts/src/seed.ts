@@ -6,6 +6,37 @@ import {
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
+async function ensureProfile(
+  userId: string,
+  profile: {
+    firstName: string;
+    secondName: string;
+    thirdName: string;
+    familyName: string;
+    age: number;
+    nationalId: string;
+    phone?: string;
+    governorate?: string;
+    city?: string;
+    address?: string;
+  },
+) {
+  const [existingProfile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, userId)).limit(1);
+  if (!existingProfile) {
+    await db.insert(userProfilesTable).values({
+      userId,
+      ...profile,
+      profileStatus: "COMPLETE",
+    });
+    return;
+  }
+
+  await db.update(userProfilesTable).set({
+    ...profile,
+    profileStatus: "COMPLETE",
+  }).where(eq(userProfilesTable.id, existingProfile.id));
+}
+
 async function seed() {
   console.log("Seeding database...");
   const jordanianLicenseCategories = [
@@ -179,6 +210,52 @@ async function seed() {
     await db.update(usersTable).set({ passwordHash: userHash, isActive: true }).where(eq(usersTable.email, "user@rukhsty.jo"));
   }
 
+  const existingTestUser = await db.select().from(usersTable).where(eq(usersTable.email, "test.user@rukhsty.jo")).limit(1);
+  const testUserHash = await bcrypt.hash("password123", 10);
+  if (existingTestUser.length === 0) {
+    const [testUser] = await db.insert(usersTable).values({ email: "test.user@rukhsty.jo", passwordHash: testUserHash, role: "USER", isEmailVerified: true }).returning();
+    await db.insert(userProfilesTable).values({
+      userId: testUser.id,
+      firstName: "Test",
+      secondName: "Demo",
+      thirdName: "",
+      familyName: "Citizen",
+      age: 24,
+      nationalId: "5555555555",
+      phone: "+962-7-5555-5555",
+      governorate: "Amman",
+      city: "Amman",
+      area: "Demo",
+      address: "Demo address, Amman",
+      personalPhotoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=demo-citizen",
+      profileStatus: "COMPLETE",
+    });
+    console.log("Test citizen seeded.");
+  } else {
+    await db.update(usersTable).set({ passwordHash: testUserHash, isActive: true }).where(eq(usersTable.email, "test.user@rukhsty.jo"));
+    const [profile] = await db.select().from(userProfilesTable).where(eq(userProfilesTable.userId, existingTestUser[0].id)).limit(1);
+    if (!profile) {
+      await db.insert(userProfilesTable).values({
+        userId: existingTestUser[0].id,
+        firstName: "Test",
+        secondName: "Demo",
+        thirdName: "",
+        familyName: "Citizen",
+        age: 24,
+        nationalId: "5555555555",
+        phone: "+962-7-5555-5555",
+        governorate: "Amman",
+        city: "Amman",
+        area: "Demo",
+        address: "Demo address, Amman",
+        personalPhotoUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=demo-citizen",
+        profileStatus: "COMPLETE",
+      });
+    } else if (profile.nationalId !== "5555555555") {
+      await db.update(userProfilesTable).set({ nationalId: "5555555555", profileStatus: "COMPLETE" }).where(eq(userProfilesTable.id, profile.id));
+    }
+  }
+
   // Officer accounts
   const officers = [
     { email: "training.officer@rukhsty.jo", role: "TRAINING_CENTER_OFFICER", name: "سامر", nationalId: "9900000001", centerIdx: 0 },
@@ -199,6 +276,14 @@ async function seed() {
       }
     } else {
       await db.update(usersTable).set({ passwordHash: hash, role: o.role, isActive: true }).where(eq(usersTable.email, o.email));
+      await ensureProfile(existing[0].id, {
+        firstName: o.name,
+        secondName: "الموظف",
+        thirdName: "",
+        familyName: "رخصتي",
+        age: 30,
+        nationalId: o.nationalId,
+      });
     }
   }
   console.log("Officers seeded.");
@@ -229,6 +314,18 @@ async function seed() {
     console.log("Security officer seeded.");
   } else {
     await db.update(usersTable).set({ passwordHash: securityHash, role: "SECURITY_OFFICER", isActive: true }).where(eq(usersTable.email, "security.officer@rukhsty.jo"));
+    await ensureProfile(existingSecurityOfficer[0].id, {
+      firstName: "Security",
+      secondName: "Review",
+      thirdName: "",
+      familyName: "Officer",
+      age: 32,
+      nationalId: "9999999991",
+      phone: "0790000001",
+      governorate: "Amman",
+      city: "Amman",
+      address: "Public Security Directorate",
+    });
   }
 
   console.log("Database seeding complete!");

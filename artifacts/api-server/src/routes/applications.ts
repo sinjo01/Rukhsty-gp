@@ -3,14 +3,17 @@ import { db } from "@workspace/db";
 import {
   applicationsTable, applicationStepsTable, documentsTable, appointmentsTable,
   trainingRecordsTable, medicalTestsTable, examsTable, centersTable,
-  servicesTable, licenseCategoriesTable, notificationsTable, userProfilesTable, usersTable
+  servicesTable, licenseCategoriesTable, notificationsTable, userProfilesTable, usersTable,
+  drivingLicensesTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, JwtPayload } from "../middlewares/auth";
 import type { Request } from "express";
 import { routeParam } from "../lib/route-params";
+import { getLicenseWithCategory } from "../services/license-issuance";
 
 const router = Router();
+const TRAINING_CERTIFICATE_DOCUMENT_TYPE = "TRAINING_CERTIFICATE";
 
 const APPLICATION_STEPS = [
   { stepKey: "APPLICATION_SUBMITTED", stepNameAr: "تقديم الطلب", stepNameEn: "Application submitted", orderNumber: 1 },
@@ -120,7 +123,8 @@ async function getApplicationDetail(appId: string, userId: string | null) {
   }
   const [medicalTest] = await db.select().from(medicalTestsTable).where(eq(medicalTestsTable.applicationId, appId)).limit(1);
   const exams = await db.select().from(examsTable).where(eq(examsTable.applicationId, appId));
-  return { ...app, service: service ?? null, licenseCategory: licenseCategory ?? null, user: user ?? null, profile: profile ?? null, steps, documents: docs, appointments: appointmentsWithCenter, trainingRecord: trainingWithCenter, medicalTest: medicalTest ?? null, exams };
+  const [license] = await db.select().from(drivingLicensesTable).where(eq(drivingLicensesTable.applicationId, app.id)).limit(1);
+  return { ...app, service: service ?? null, licenseCategory: licenseCategory ?? null, user: user ?? null, profile: profile ?? null, steps, documents: docs, appointments: appointmentsWithCenter, trainingRecord: trainingWithCenter, medicalTest: medicalTest ?? null, exams, license: await getLicenseWithCategory(license ?? null) };
 }
 
 router.get("/applications", requireAuth, async (req, res) => {
@@ -132,9 +136,18 @@ router.get("/applications", requireAuth, async (req, res) => {
 
 router.post("/applications", requireAuth, async (req, res) => {
   const { userId } = (req as Request & { user: JwtPayload }).user;
-  const { serviceId, licenseCategoryId, governorate, residenceArea } = req.body;
+  const { serviceId, licenseCategoryId, governorate, residenceArea, trainingCertificate } = req.body;
   const [service] = serviceId ? await db.select().from(servicesTable).where(eq(servicesTable.id, serviceId)).limit(1) : [null];
   const isIssueDrivingLicense = service?.code === "ISSUE_DRIVING_LICENSE";
+  if (isIssueDrivingLicense) {
+    const fileUrl = typeof trainingCertificate?.fileUrl === "string" ? trainingCertificate.fileUrl.trim() : "";
+    const fileName = typeof trainingCertificate?.fileName === "string" ? trainingCertificate.fileName.trim() : "";
+    const mimeType = typeof trainingCertificate?.mimeType === "string" ? trainingCertificate.mimeType.trim() : "";
+    if (!fileUrl || !fileName || !mimeType.startsWith("image/")) {
+      res.status(400).json({ message: "Training certificate image is required for first-time driving license applications" });
+      return;
+    }
+  }
   const appNumber = `RU-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   const [app] = await db.insert(applicationsTable).values({
     userId,
@@ -147,6 +160,17 @@ router.post("/applications", requireAuth, async (req, res) => {
     residenceArea,
     submittedAt: isIssueDrivingLicense ? new Date() : null,
   }).returning();
+  if (isIssueDrivingLicense) {
+    await db.insert(documentsTable).values({
+      userId,
+      applicationId: app.id,
+      documentType: TRAINING_CERTIFICATE_DOCUMENT_TYPE,
+      fileUrl: trainingCertificate.fileUrl,
+      fileName: trainingCertificate.fileName,
+      mimeType: trainingCertificate.mimeType,
+      verificationStatus: "PENDING",
+    });
+  }
   await syncApplicationSteps(app.id, app.status, app.currentStep);
   if (isIssueDrivingLicense) {
     await db.insert(notificationsTable).values({

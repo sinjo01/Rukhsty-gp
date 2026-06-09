@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const DEMO_ACCOUNTS = [
   { label: "Admin", labelAr: "مدير النظام", email: "admin@rukhsty.jo", nationalId: "9000000001", password: "password123" },
   { label: "User", labelAr: "مستخدم", email: "user@rukhsty.jo", nationalId: "9876543210", password: "password123" },
+  { label: "Test Citizen", labelAr: "مواطن تجريبي", email: "test.user@rukhsty.jo", nationalId: "5555555555", password: "password123" },
   { label: "Security Officer", labelAr: "موظف المراجعة الأمنية", email: "security.officer@rukhsty.jo", nationalId: "9999999991", password: "password123" },
   { label: "Medical Officer", labelAr: "موظف الفحص الطبي", email: "medical.officer@rukhsty.jo", nationalId: "9900000002", password: "password123" },
   { label: "Theory Officer", labelAr: "موظف الامتحان النظري", email: "theory.officer@rukhsty.jo", nationalId: "9900000003", password: "password123" },
@@ -188,7 +189,7 @@ export default function Login() {
                     <button
                       key={account.email}
                       type="button"
-                      onClick={() => fillCredentials(account.email, account.password)}
+                      onClick={() => fillCredentials(account.nationalId, account.password)}
                       className={cn(
                         "rounded-md border border-border bg-background px-2 py-1.5 text-xs transition-colors hover:bg-primary/10",
                         isRTL ? "text-right" : "text-left",

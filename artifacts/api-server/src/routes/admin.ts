@@ -14,6 +14,7 @@ import type { JwtPayload } from "../middlewares/auth";
 import { getLicenseWithCategory, issueLicenseForApplication } from "../services/license-issuance";
 
 const router = Router();
+const TRAINING_CERTIFICATE_DOCUMENT_TYPE = "TRAINING_CERTIFICATE";
 
 router.get("/admin/stats", requireAuth, requireRole("ADMIN", "DVLD_OFFICER", "SECURITY_OFFICER"), async (_req, res) => {
   const [{ value: totalApplications }] = await db.select({ value: count() }).from(applicationsTable);
@@ -89,6 +90,17 @@ async function securityApprove(req: Request, res: Response) {
   const [currentApp] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, routeParam(req, "id"))).limit(1);
   if (!currentApp) { res.status(404).json({ message: "Application not found" }); return; }
   if (currentApp.status !== "SECURITY_REVIEW") { res.status(409).json({ message: "Application is not in security review" }); return; }
+  const [service] = currentApp.serviceId ? await db.select().from(servicesTable).where(eq(servicesTable.id, currentApp.serviceId)).limit(1) : [null];
+  if (service?.code === "ISSUE_DRIVING_LICENSE") {
+    const [trainingCertificate] = await db.select().from(documentsTable).where(and(
+      eq(documentsTable.applicationId, currentApp.id),
+      eq(documentsTable.documentType, TRAINING_CERTIFICATE_DOCUMENT_TYPE),
+    )).limit(1);
+    if (!trainingCertificate) {
+      res.status(409).json({ message: "Training certificate image is required before approving this application" });
+      return;
+    }
+  }
   const [app] = await db.update(applicationsTable).set({
     status: "SECURITY_APPROVED",
     currentStep: "MEDICAL_BOOKING",

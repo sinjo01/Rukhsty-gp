@@ -1,8 +1,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { loadLocalEnv } from "./load-env";
 
 const { Pool } = pg;
+
+loadLocalEnv();
 
 if (!process.env.DATABASE_URL) {
   throw new Error(

@@ -155,6 +155,11 @@ export interface CreateApplicationBody {
   licenseCategoryId?: string | null;
   governorate: string;
   residenceArea: string;
+  trainingCertificate?: {
+    fileUrl: string;
+    fileName: string;
+    mimeType: string;
+  };
 }
 
 export interface Application {

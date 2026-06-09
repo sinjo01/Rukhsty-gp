@@ -1,5 +1,6 @@
-import React from "react";
-import { useGetDashboardSummary, getGetDashboardSummaryQueryKey, useListNotifications, getListNotificationsQueryKey } from "@workspace/api-client-react";
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGetDashboardSummary, getGetDashboardSummaryQueryKey, useListNotifications, getListNotificationsQueryKey, getGetMyLicenseQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,11 +21,21 @@ const SERVICES = [
   { title: "Vehicle Registration", titleAr: "تجديد ترخيص المركبة", href: "/services/renew-vehicle-registration", icon: Car, description: "Renew vehicle registration", gradient: "from-amber-500 to-orange-600", glow: "bg-amber-500/20" },
 ];
 
+function dashboardReferencePreview() {
+  const date = new Date();
+  const compact = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+  return `RKH-${compact}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
 export default function Dashboard() {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { language, isRTL } = useLanguage();
   const { data: summary, isLoading } = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const { data: notifications } = useListNotifications({ query: { queryKey: getListNotificationsQueryKey() } });
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paidLicense, setPaidLicense] = useState<any>(null);
+  const [referencePreview] = useState(dashboardReferencePreview);
 
   const unread = notifications?.filter((n: any) => !n.isRead) ?? [];
 
@@ -40,10 +51,36 @@ export default function Dashboard() {
   }
 
   const firstName = user?.profile?.firstName ?? user?.email?.split("@")[0] ?? "Citizen";
-  const issuedLicense = (summary as any)?.myLicense;
+  const issuedLicense = paidLicense ?? (summary as any)?.myLicense;
   const hasIssuedLicense = Boolean(issuedLicense?.status === "ACTIVE" || issuedLicense);
+  const isLicensePaid = issuedLicense?.paymentStatus === "paid";
+  const showDashboardPayment = Boolean(issuedLicense?.id && !isLicensePaid);
   const activeApplication = (summary as any)?.activeApplication;
   const isRenewalApplication = activeApplication?.service?.code === "RENEW_DRIVING_LICENSE" || String(activeApplication?.status ?? "").startsWith("RENEWAL_") || activeApplication?.status === "LICENSE_RENEWED";
+  const paymentReference = issuedLicense?.paymentReference ?? referencePreview;
+
+  const handleDashboardPayment = async () => {
+    if (!issuedLicense?.id) return;
+    setPaymentLoading(true);
+    try {
+      const response = await fetch(`/api/licenses/${issuedLicense.id}/mock-pay`, {
+        method: "PATCH",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${localStorage.getItem("rukhsty_token") ?? ""}`,
+        },
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.message ?? "Payment failed");
+      setPaidLicense(result?.data?.license ?? issuedLicense);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetMyLicenseQueryKey() }),
+      ]);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8" dir={isRTL ? "rtl" : "ltr"}>
@@ -125,6 +162,25 @@ export default function Dashboard() {
                 Your driving license is active and ready. The digital card below carries your photo, license information, category, dates, and verification QR.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
+                {showDashboardPayment && (
+                  <Button onClick={handleDashboardPayment} disabled={paymentLoading} className="bg-white text-emerald-950 hover:bg-amber-50">
+                    {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
+                  </Button>
+                )}
+                {isLicensePaid && (
+                  <Badge className="bg-emerald-100 px-4 py-2 text-emerald-800 hover:bg-emerald-100">
+                    {language === "ar" ? "مدفوع" : "Paid"}
+                  </Badge>
+                )}
+                <Link href={`/delivery/aramex/${issuedLicense.id}`}>
+                  <Button className="bg-white text-emerald-950 hover:bg-amber-50">
+                    {issuedLicense.deliveryMethod === "aramex"
+                      ? issuedLicense.aramexTrackingNumber
+                        ? `Aramex ${issuedLicense.aramexTrackingNumber}`
+                        : language === "ar" ? "تعديل توصيل أرامكس" : "Edit Aramex Delivery"
+                      : language === "ar" ? "التوصيل عبر أرامكس" : "Deliver by Aramex"}
+                  </Button>
+                </Link>
                 <Link href="/my-license">
                   <Button className="bg-amber-100 text-emerald-950 hover:bg-amber-50">{language === "ar" ? "عرض الرخصة كاملة" : "Open Full License"}</Button>
                 </Link>
@@ -139,6 +195,31 @@ export default function Dashboard() {
               <DigitalLicenseCard license={issuedLicense} />
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {showDashboardPayment && issuedLicense && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <Card className="border-amber-200 bg-white shadow-sm">
+            <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                  {language === "ar" ? "بانتظار الدفع" : "Pending Payment"}
+                </Badge>
+                <h2 className="mt-3 text-xl font-bold text-emerald-950">
+                  {language === "ar" ? "ادفع رسوم الرخصة عبر إي فواتيركم" : "Pay License Fees via eFAWATEERcom"}
+                </h2>
+                <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+                  <span><strong>{language === "ar" ? "الطريقة:" : "Method:"}</strong> eFAWATEERcom</span>
+                  <span><strong>{language === "ar" ? "المرجع:" : "Reference:"}</strong> <span className="font-mono">{paymentReference}</span></span>
+                  <span><strong>{language === "ar" ? "المبلغ:" : "Amount:"}</strong> 3.00 JOD</span>
+                </div>
+              </div>
+              <Button onClick={handleDashboardPayment} disabled={paymentLoading} className="bg-emerald-700 hover:bg-emerald-800">
+                {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
+              </Button>
+            </CardContent>
+          </Card>
         </motion.div>
       )}
 

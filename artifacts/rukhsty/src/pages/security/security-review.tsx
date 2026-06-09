@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, Clock, Eye, FileSearch, FileText, Info, RefreshCw, Search, ShieldCheck, UserCheck, XCircle } from "lucide-react";
+import { CheckCircle, Clock, Eye, FileSearch, FileText, ImageIcon, Info, Maximize2, RefreshCw, Search, ShieldCheck, UserCheck, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 type ReviewAction = "APPROVE" | "REJECT" | "INFO";
@@ -31,6 +31,10 @@ function applicationList(value: unknown): any[] {
   return Array.isArray(maybeData) ? maybeData : [];
 }
 
+function trainingCertificate(app: any) {
+  return app.documents?.find((doc: any) => doc.documentType === "TRAINING_CERTIFICATE") ?? null;
+}
+
 export default function SecurityReview() {
   const { language, isRTL } = useLanguage();
   const isArabic = language === "ar";
@@ -42,12 +46,18 @@ export default function SecurityReview() {
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [removedApplicationIds, setRemovedApplicationIds] = useState<Set<string>>(new Set());
 
   const listParams = { status: "SECURITY_REVIEW", serviceCode: "ISSUE_DRIVING_LICENSE" } as any;
   const { data, isLoading } = useListAdminApplications(listParams, {
     query: { queryKey: getListAdminApplicationsQueryKey(listParams) },
   });
-  const apps = applicationList(data);
+  const apps = useMemo(() => {
+    return applicationList(data)
+      .filter((app: any) => app.status === "SECURITY_REVIEW")
+      .filter((app: any) => !removedApplicationIds.has(app.id))
+      .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [data, removedApplicationIds]);
   const recentParams = { serviceCode: "ISSUE_DRIVING_LICENSE", limit: 5 } as any;
   const { data: recentData } = useListAdminApplications(recentParams, {
     query: { queryKey: getListAdminApplicationsQueryKey(recentParams) },
@@ -101,6 +111,10 @@ export default function SecurityReview() {
         title: isArabic ? "تم تحديث الطلب" : "Application updated",
         description: actionCopy(action, isArabic),
       });
+      if (action === "APPROVE" || action === "REJECT") {
+        setRemovedApplicationIds((ids) => new Set(ids).add(actionDialog.id));
+        if (detailsApp?.id === actionDialog.id) setDetailsApp(null);
+      }
       setActionDialog({ open: false, id: "", action: "APPROVE" });
       setNote("");
       refreshApplications();
@@ -185,6 +199,7 @@ export default function SecurityReview() {
       <div className="space-y-3">
         {filteredApps.map((app: any, index: number) => {
           const citizenName = fullName(app.profile) || app.user?.email || (isArabic ? "مواطن" : "Citizen");
+          const certificate = trainingCertificate(app);
           return (
             <motion.div key={app.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
               <Card className="overflow-hidden transition-all hover:border-primary/30 hover:shadow-md">
@@ -205,6 +220,10 @@ export default function SecurityReview() {
                           <span className="font-mono">{app.profile?.nationalId || "N/A"}</span>
                           <span>{isArabic ? app.licenseCategory?.nameAr : app.licenseCategory?.nameEn || app.licenseCategory?.code || "License category"}</span>
                           <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(app.createdAt).toLocaleDateString()}</span>
+                          <span className={cn("flex items-center gap-1 font-medium", certificate ? "text-emerald-700" : "text-red-600")}>
+                            <ImageIcon className="h-3 w-3" />
+                            {certificate ? (isArabic ? "شهادة التدريب مرفقة" : "Training certificate attached") : (isArabic ? "شهادة التدريب غير مرفقة" : "Training certificate missing")}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -277,11 +296,19 @@ export default function SecurityReview() {
       </div>
 
       <Dialog open={Boolean(detailsApp)} onOpenChange={(open) => !open && setDetailsApp(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>{isArabic ? "تفاصيل الطلب" : "Application Details"}</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto p-0">
           {detailsApp && (
-            <div className="space-y-5">
-              <div className="rounded-2xl border bg-gradient-to-r from-emerald-950 to-slate-900 p-4 text-white">
+            <div className="space-y-5 p-6 pt-5">
+              <DialogHeader className="border-b pb-4">
+                <DialogTitle className="text-2xl leading-tight text-slate-950">
+                  {isArabic ? "تفاصيل طلب إصدار رخصة لأول مرة" : "First-Time License Application Details"}
+                </DialogTitle>
+                <p className="break-all font-mono text-sm font-semibold text-muted-foreground">
+                  {detailsApp.applicationNumber}
+                </p>
+              </DialogHeader>
+
+              <div className="rounded-2xl border bg-gradient-to-r from-emerald-950 to-slate-900 p-5 text-white">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <button
                     type="button"
@@ -309,6 +336,55 @@ export default function SecurityReview() {
                 </div>
               </div>
 
+              {(() => {
+                const certificate = trainingCertificate(detailsApp);
+                return (
+                  <div className={cn("rounded-2xl border p-4", certificate ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50")}>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className={cn("flex items-center gap-2 text-base font-bold", certificate ? "text-emerald-950" : "text-red-800")}>
+                          <ImageIcon className="h-5 w-5" />
+                          {isArabic ? "شهادة التدريب المطلوبة" : "Required Training Certificate"}
+                        </p>
+                        <p className={cn("mt-1 text-sm", certificate ? "text-emerald-800" : "text-red-700")}>
+                          {certificate
+                            ? (isArabic ? "الصورة مرفقة ويمكن فتحها للمراجعة." : "Image is attached. Open it to review the certificate clearly.")
+                            : (isArabic ? "لا توافق على الطلب حتى يتم رفع صورة شهادة التدريب." : "Do not approve this application until the training certificate image is uploaded.")}
+                        </p>
+                      </div>
+                      <Badge className={certificate ? "bg-emerald-700 text-white hover:bg-emerald-700" : "bg-red-600 text-white hover:bg-red-600"}>
+                        {certificate ? certificate.verificationStatus : (isArabic ? "غير مرفقة" : "Missing")}
+                      </Badge>
+                    </div>
+                    {certificate && (
+                      <div className="grid gap-4 md:grid-cols-[220px_1fr] md:items-center">
+                        <button
+                          type="button"
+                          onClick={() => setPhotoPreview({ src: certificate.fileUrl, name: certificate.fileName || (isArabic ? "شهادة التدريب" : "Training certificate") })}
+                          className="overflow-hidden rounded-xl border bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                          aria-label={isArabic ? "فتح صورة شهادة التدريب" : "Open training certificate image"}
+                        >
+                          <img src={certificate.fileUrl} alt={isArabic ? "صورة شهادة التدريب" : "Training certificate"} className="h-36 w-full object-contain" />
+                        </button>
+                        <div className="space-y-3">
+                          <div className="rounded-xl border bg-white/80 p-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{isArabic ? "اسم الملف" : "File name"}</p>
+                            <p className="mt-1 break-all text-sm font-semibold text-slate-950">{certificate.fileName || "training-certificate"}</p>
+                          </div>
+                          <Button
+                            className="w-full gap-2 bg-emerald-700 hover:bg-emerald-800 md:w-auto"
+                            onClick={() => setPhotoPreview({ src: certificate.fileUrl, name: certificate.fileName || (isArabic ? "شهادة التدريب" : "Training certificate") })}
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                            {isArabic ? "عرض الشهادة بوضوح" : "View Certificate"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="grid gap-3 md:grid-cols-2">
                 {[
                   [isArabic ? "رقم الطلب" : "Application number", detailsApp.applicationNumber],
@@ -334,11 +410,11 @@ export default function SecurityReview() {
       </Dialog>
 
       <Dialog open={Boolean(photoPreview)} onOpenChange={(open) => !open && setPhotoPreview(null)}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>{photoPreview?.name}</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[92vh] max-w-6xl overflow-y-auto">
+          <DialogHeader><DialogTitle className="break-words text-xl">{photoPreview?.name}</DialogTitle></DialogHeader>
           {photoPreview && (
             <div className="flex justify-center rounded-2xl bg-slate-100 p-4">
-              <img src={photoPreview.src} alt={photoPreview.name} className="max-h-[70vh] rounded-xl object-contain shadow-sm" />
+              <img src={photoPreview.src} alt={photoPreview.name} className="max-h-[78vh] w-full rounded-xl object-contain shadow-sm" />
             </div>
           )}
         </DialogContent>

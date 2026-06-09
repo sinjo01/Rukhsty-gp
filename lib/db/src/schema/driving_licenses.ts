@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, date, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, date, uuid, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -21,6 +21,20 @@ export const drivingLicensesTable = pgTable("driving_licenses", {
   status: text("status").notNull().default("ACTIVE"),
   photoUrl: text("photo_url"),
   qrCodeUrl: text("qr_code_url"),
+  paymentMethod: text("payment_method"),
+  paymentStatus: text("payment_status").default("unpaid"),
+  paymentAmount: numeric("payment_amount", { precision: 10, scale: 2 }).default("3.00"),
+  paymentReference: text("payment_reference"),
+  paymentPaidAt: timestamp("payment_paid_at"),
+  deliveryMethod: text("delivery_method"),
+  deliveryStatus: text("delivery_status").default("not_requested"),
+  deliveryAddress: text("delivery_address"),
+  deliveryCity: text("delivery_city"),
+  deliveryPhone: text("delivery_phone"),
+  deliveryLocationLink: text("delivery_location_link"),
+  deliveryDate: date("delivery_date"),
+  deliveryTimeSlot: text("delivery_time_slot"),
+  aramexTrackingNumber: text("aramex_tracking_number"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

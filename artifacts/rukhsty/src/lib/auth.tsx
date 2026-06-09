@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 
 export interface AuthUser {
@@ -43,6 +44,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem("rukhsty_token"));
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading, isError } = useGetMe({
     query: {
@@ -59,13 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isError]);
 
-  const handleLogin = (newToken: string, _userData?: unknown) => {
+  const handleLogin = (newToken: string, userData?: unknown) => {
     localStorage.setItem("rukhsty_token", newToken);
+    if (userData) {
+      queryClient.setQueryData(getGetMeQueryKey(), userData);
+    }
     setToken(newToken);
+    void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
   };
 
   const handleLogout = () => {
     localStorage.removeItem("rukhsty_token");
+    queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
     setToken(null);
     setLocation("/login");
   };

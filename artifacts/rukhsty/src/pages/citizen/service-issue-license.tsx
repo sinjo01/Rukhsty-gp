@@ -16,16 +16,32 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { CheckCircle, CreditCard, ShieldCheck, UserRound } from "lucide-react";
+import { CheckCircle, CreditCard, ImageIcon, ShieldCheck, Upload, UserRound, X } from "lucide-react";
 
 const STEPS = [
   { en: "Choose category", ar: "اختيار الفئة" },
+  { en: "Upload certificate", ar: "رفع شهادة التدريب" },
   { en: "Confirm information", ar: "تأكيد المعلومات" },
   { en: "Submit for review", ar: "الإرسال للمراجعة" },
 ];
 
+type TrainingCertificateUpload = {
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+};
+
 function fullName(profile: any) {
   return [profile?.firstName, profile?.secondName, profile?.thirdName, profile?.familyName].filter(Boolean).join(" ");
+}
+
+function readImageAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function ServiceIssueLicense() {
@@ -35,6 +51,8 @@ export default function ServiceIssueLicense() {
   const { language, isRTL } = useLanguage();
   const [step, setStep] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [trainingCertificate, setTrainingCertificate] = useState<TrainingCertificateUpload | null>(null);
+  const [certificateError, setCertificateError] = useState("");
 
   const { data: categories, isLoading: catsLoading } = useListLicenseCategories({ query: { queryKey: getListLicenseCategoriesQueryKey() } });
   const { data: services } = useListServices({ query: { queryKey: getListServicesQueryKey() } });
@@ -43,9 +61,36 @@ export default function ServiceIssueLicense() {
   const profile = user?.profile;
   const selectedCategory = categories?.find((cat: any) => cat.id === selectedCategoryId) as any;
 
+  const handleCertificateFile = async (file: File | undefined) => {
+    setCertificateError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setTrainingCertificate(null);
+      setCertificateError(language === "ar" ? "يرجى رفع صورة لشهادة التدريب." : "Please upload the training certificate as an image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setTrainingCertificate(null);
+      setCertificateError(language === "ar" ? "حجم الصورة يجب ألا يتجاوز 5 ميجابايت." : "Image size must be 5 MB or less.");
+      return;
+    }
+    try {
+      const fileUrl = await readImageAsDataUrl(file);
+      setTrainingCertificate({ fileUrl, fileName: file.name, mimeType: file.type });
+    } catch {
+      setTrainingCertificate(null);
+      setCertificateError(language === "ar" ? "تعذر قراءة صورة الشهادة." : "Could not read the certificate image.");
+    }
+  };
+
   const submit = async () => {
     if (!selectedCategoryId) {
       toast({ variant: "destructive", title: language === "ar" ? "يرجى اختيار فئة الرخصة" : "Please choose a license category" });
+      return;
+    }
+    if (!trainingCertificate) {
+      toast({ variant: "destructive", title: language === "ar" ? "يرجى رفع صورة شهادة التدريب" : "Please upload the training certificate image" });
+      setStep(1);
       return;
     }
     const service = services?.find((item: any) => item.code === "ISSUE_DRIVING_LICENSE");
@@ -60,6 +105,7 @@ export default function ServiceIssueLicense() {
           licenseCategoryId: selectedCategoryId,
           governorate: profile?.governorate || "Amman",
           residenceArea: profile?.area || profile?.city || profile?.address || "Amman",
+          trainingCertificate,
         },
       });
       toast({
@@ -123,6 +169,57 @@ export default function ServiceIssueLicense() {
       {step === 1 && (
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-4 h-4 text-primary" />
+              {language === "ar" ? "رفع صورة شهادة التدريب" : "Upload training certificate image"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {language === "ar"
+                ? "يجب إرفاق صورة شهادة التدريب قبل إرسال طلب إصدار الرخصة لأول مرة."
+                : "Attach a picture of your training certificate before submitting a first-time license application."}
+            </p>
+            <label className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${trainingCertificate ? "border-emerald-300 bg-emerald-50" : "border-border bg-muted/30 hover:border-primary/50"}`}>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => void handleCertificateFile(event.target.files?.[0])}
+              />
+              <ImageIcon className={`h-9 w-9 ${trainingCertificate ? "text-emerald-700" : "text-muted-foreground"}`} />
+              <p className="mt-3 text-sm font-semibold">
+                {trainingCertificate
+                  ? trainingCertificate.fileName
+                  : language === "ar" ? "اختر صورة الشهادة" : "Choose certificate image"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {language === "ar" ? "PNG أو JPG أو أي صورة حتى 5 ميجابايت" : "PNG, JPG, or any image up to 5 MB"}
+              </p>
+            </label>
+            {certificateError && <p className="text-sm text-destructive">{certificateError}</p>}
+            {trainingCertificate && (
+              <div className="rounded-2xl border bg-background p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{language === "ar" ? "تم إرفاق الشهادة" : "Certificate attached"}</p>
+                    <p className="text-xs text-muted-foreground">{trainingCertificate.mimeType}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-1" onClick={() => setTrainingCertificate(null)}>
+                    <X className="h-3.5 w-3.5" />
+                    {language === "ar" ? "إزالة" : "Remove"}
+                  </Button>
+                </div>
+                <img src={trainingCertificate.fileUrl} alt={language === "ar" ? "صورة شهادة التدريب" : "Training certificate preview"} className="mt-3 max-h-72 w-full rounded-xl object-contain bg-muted/40" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && (
+        <Card>
+          <CardHeader>
             <CardTitle className="flex items-center gap-2"><UserRound className="w-4 h-4 text-primary" />{language === "ar" ? "تأكيد البيانات الشخصية" : "Confirm personal information"}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-[120px_1fr]">
@@ -150,7 +247,7 @@ export default function ServiceIssueLicense() {
         </Card>
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <Card className="border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
@@ -165,9 +262,16 @@ export default function ServiceIssueLicense() {
                 : "After submission, the application will be routed to Public Security / DVLD review."}
             </p>
             {selectedCategory && (
-              <Badge className="bg-emerald-700 text-white">
-                {language === "ar" ? selectedCategory.nameAr : selectedCategory.nameEn}
-              </Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge className="bg-emerald-700 text-white">
+                  {language === "ar" ? selectedCategory.nameAr : selectedCategory.nameEn}
+                </Badge>
+                {trainingCertificate && (
+                  <Badge className="bg-white text-emerald-800 hover:bg-white">
+                    {language === "ar" ? "شهادة التدريب مرفقة" : "Training certificate attached"}
+                  </Badge>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -175,8 +279,18 @@ export default function ServiceIssueLicense() {
 
       <div className="flex gap-3">
         {step > 0 && <Button variant="outline" onClick={() => setStep((s) => s - 1)}>{language === "ar" ? "رجوع" : "Back"}</Button>}
-        {step < 2 ? (
-          <Button className="flex-1" onClick={() => selectedCategoryId ? setStep((s) => s + 1) : toast({ variant: "destructive", title: language === "ar" ? "يرجى اختيار فئة الرخصة" : "Please choose a license category" })}>
+        {step < STEPS.length - 1 ? (
+          <Button className="flex-1" onClick={() => {
+            if (step === 0 && !selectedCategoryId) {
+              toast({ variant: "destructive", title: language === "ar" ? "يرجى اختيار فئة الرخصة" : "Please choose a license category" });
+              return;
+            }
+            if (step === 1 && !trainingCertificate) {
+              toast({ variant: "destructive", title: language === "ar" ? "يرجى رفع صورة شهادة التدريب" : "Please upload the training certificate image" });
+              return;
+            }
+            setStep((s) => s + 1);
+          }}>
             {language === "ar" ? "التالي" : "Next"}
           </Button>
         ) : (

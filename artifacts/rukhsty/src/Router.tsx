@@ -21,6 +21,7 @@ import BookPractical from "@/pages/citizen/book-practical";
 import Appointments from "@/pages/citizen/appointments";
 import LicenseCard from "@/pages/citizen/license-card";
 import LicenseSuccess from "@/pages/citizen/license-success";
+import AramexDelivery from "@/pages/citizen/aramex-delivery";
 import Notifications from "@/pages/citizen/notifications";
 
 import OfficerDashboard from "@/pages/officer/officer-dashboard";
@@ -89,6 +90,9 @@ export default function AppRouter() {
         <Route path="/my-license" component={() => <ProtectedRoute component={LicenseCard} allowedRoles={["USER"]} />} />
         <Route path="/license-card" component={() => <ProtectedRoute component={LicenseCard} allowedRoles={["USER"]} />} />
         <Route path="/license-success" component={() => <ProtectedRoute component={LicenseSuccess} allowedRoles={["USER"]} />} />
+        <Route path="/delivery/aramex/:id">
+          {(params) => <ProtectedRoute component={AramexDelivery} allowedRoles={["USER"]} params={params} />}
+        </Route>
         <Route path="/notifications" component={() => <ProtectedRoute component={Notifications} allowedRoles={["USER"]} />} />
 
         {/* Officer */}

@@ -34,7 +34,13 @@ const now = new Date().toISOString();
 
 const demoUsers: DemoUser[] = [
   demoUser("admin", "admin@rukhsty.jo", "password123", "ADMIN", "مدير", "رخصتي", { nationalId: "9000000001" }),
-  demoUser("user", "user@rukhsty.jo", "password123", "USER", "محمد", "الأردني", { nationalId: "9800000001" }),
+  demoUser("user", "user@rukhsty.jo", "password123", "USER", "محمد", "الأردني", { nationalId: "9876543210" }),
+  demoUser("test-user", "test.user@rukhsty.jo", "password123", "USER", "Test", "Citizen", {
+    nationalId: "5555555555",
+    phone: "+962-7-5555-5555",
+    governorate: "Amman",
+    address: "Demo address, Amman",
+  }),
   demoUser("training", "training.officer@rukhsty.jo", "password123", "TRAINING_CENTER_OFFICER", "سامر", "رخصتي", { nationalId: "9900000001" }),
   demoUser("medical", "medical.officer@rukhsty.jo", "password123", "MEDICAL_CENTER_OFFICER", "ريم", "رخصتي", { nationalId: "9900000002" }),
   demoUser("theory", "theory.officer@rukhsty.jo", "password123", "THEORY_EXAM_OFFICER", "خالد", "رخصتي", { nationalId: "9900000003" }),
@@ -80,6 +86,9 @@ const applications: any[] = [
     serviceType: "ISSUE_DRIVING_LICENSE",
     governorate: "Amman",
     residenceArea: "Shmeisani",
+    paymentStatus: "unpaid",
+    paymentAmount: "3.00",
+    deliveryStatus: "not_requested",
     createdAt: now,
     updatedAt: now,
   },
@@ -89,6 +98,7 @@ const appointments: any[] = [];
 const medicalTests: any[] = [];
 const exams: any[] = [];
 const licenses: any[] = [];
+const documents: any[] = [];
 
 const centers: any[] = [
   {
@@ -248,6 +258,14 @@ export function devApiMock(): Plugin {
             const body = await readJson(req);
             const service = services.find((item) => item.id === asString(body.serviceId));
             const isIssueDrivingLicense = service?.code === "ISSUE_DRIVING_LICENSE";
+            const trainingCertificate = body.trainingCertificate as Record<string, unknown> | undefined;
+            const certificateFileUrl = asString(trainingCertificate?.fileUrl);
+            const certificateFileName = asString(trainingCertificate?.fileName);
+            const certificateMimeType = asString(trainingCertificate?.mimeType);
+            if (isIssueDrivingLicense && (!certificateFileUrl || !certificateFileName || !certificateMimeType.startsWith("image/"))) {
+              sendJson(res, { message: "Training certificate image is required for first-time driving license applications" }, 400);
+              return;
+            }
             const app = {
               id: `app-${Date.now()}`,
               applicationNumber: `RKH-${new Date().getFullYear()}-${String(applications.length + 1).padStart(4, "0")}`,
@@ -264,6 +282,19 @@ export function devApiMock(): Plugin {
               updatedAt: new Date().toISOString(),
             };
             applications.unshift(app);
+            if (isIssueDrivingLicense) {
+              documents.unshift({
+                id: `doc-${Date.now()}`,
+                userId: user.id,
+                applicationId: app.id,
+                documentType: "TRAINING_CERTIFICATE",
+                fileUrl: certificateFileUrl,
+                fileName: certificateFileName,
+                mimeType: certificateMimeType,
+                verificationStatus: "PENDING",
+                createdAt: new Date().toISOString(),
+              });
+            }
             addNotification(user.id, "Application submitted successfully", `تم تقديم طلبك رقم ${app.applicationNumber} بنجاح.`);
             sendJson(res, applicationDetail(app), 201);
             return;
@@ -303,6 +334,10 @@ export function devApiMock(): Plugin {
           if (method === "POST" && path.startsWith("/admin/applications/") && path.includes("/security/")) {
             const [, , , id, , action] = path.split("/");
             const body = await readJson(req);
+            if (action === "approve" && !documents.some((item) => item.applicationId === id && item.documentType === "TRAINING_CERTIFICATE")) {
+              sendJson(res, { message: "Training certificate image is required before approving this application" }, 409);
+              return;
+            }
             const updated = updateSecurityApplication(id, action, asString(body.rejectionReason || body.note || body.message));
             if (!updated) {
               sendJson(res, { message: "Application not found" }, 404);
@@ -315,6 +350,10 @@ export function devApiMock(): Plugin {
           if (method === "POST" && path.startsWith("/security/applications/")) {
             const [, , , id, action] = path.split("/");
             const body = await readJson(req);
+            if (action === "approve" && !documents.some((item) => item.applicationId === id && item.documentType === "TRAINING_CERTIFICATE")) {
+              sendJson(res, { message: "Training certificate image is required before approving this application" }, 409);
+              return;
+            }
             const updated = updateSecurityApplication(id, action, asString(body.rejectionReason || body.note || body.message));
             if (!updated) {
               sendJson(res, { message: "Application not found" }, 404);
@@ -403,6 +442,118 @@ export function devApiMock(): Plugin {
               ? "تم حجز موعد الامتحان النظري بنجاح."
               : "تم حجز موعد الامتحان العملي بنجاح.");
             sendJson(res, withCenter(appointment), 201);
+            return;
+          }
+
+          if (method === "PATCH" && path.match(/^\/licenses\/[^/]+\/mock-pay$/)) {
+            const id = path.split("/")[2];
+            const found = findApplicationOrLicense(id);
+            if (!found?.app && !found?.license) {
+              sendJson(res, { success: false, message: "License or application not found." }, 404);
+              return;
+            }
+            const app = found.app;
+            if (app && !paymentEligible(app)) {
+              sendJson(res, { success: false, message: "Application must be approved before payment." }, 409);
+              return;
+            }
+            if ((found.license?.paymentStatus ?? app?.paymentStatus) === "paid") {
+              sendJson(res, { success: true, message: "Payment completed successfully. Your license has been issued.", data: { application: app, license: found.license } });
+              return;
+            }
+            const paymentReference = found.license?.paymentReference ?? app?.paymentReference ?? generateEfawateercomReference();
+            const shouldConfirmDelivery = (found.license?.deliveryMethod ?? app?.deliveryMethod) === "aramex";
+            const tracking = shouldConfirmDelivery ? found.license?.aramexTrackingNumber ?? app?.aramexTrackingNumber ?? generateMockAramexTrackingNumber() : found.license?.aramexTrackingNumber ?? app?.aramexTrackingNumber;
+            if (app) {
+              app.status = "LICENSE_ISSUED";
+              app.currentStep = "LICENSE_ISSUANCE";
+              app.paymentMethod = "efawateercom";
+              app.paymentStatus = "paid";
+              app.paymentAmount = "3.00";
+              app.paymentReference = paymentReference;
+              app.paymentPaidAt = new Date().toISOString();
+              app.completedAt = new Date().toISOString();
+              app.updatedAt = new Date().toISOString();
+              if (shouldConfirmDelivery) app.deliveryStatus = "payment_confirmed";
+              if (tracking) app.aramexTrackingNumber = tracking;
+            }
+            // TODO: Replace mock-pay endpoint with real eFAWATEERcom callback/API integration in production.
+            // TODO: Replace mock Aramex tracking number with real Aramex shipment API integration in production.
+            const license = found.license ?? (app ? issueLicense(app) : null);
+            if (license) {
+              license.paymentMethod = "efawateercom";
+              license.paymentStatus = "paid";
+              license.paymentAmount = "3.00";
+              license.paymentReference = paymentReference;
+              license.paymentPaidAt = new Date().toISOString();
+              license.deliveryMethod = license.deliveryMethod ?? app?.deliveryMethod;
+              license.deliveryStatus = shouldConfirmDelivery ? "payment_confirmed" : license.deliveryStatus ?? app?.deliveryStatus;
+              license.deliveryAddress = license.deliveryAddress ?? app?.deliveryAddress;
+              license.deliveryCity = license.deliveryCity ?? app?.deliveryCity;
+              license.deliveryPhone = license.deliveryPhone ?? app?.deliveryPhone;
+              license.deliveryLocationLink = license.deliveryLocationLink ?? app?.deliveryLocationLink;
+              license.deliveryDate = license.deliveryDate ?? app?.deliveryDate;
+              license.deliveryTimeSlot = license.deliveryTimeSlot ?? app?.deliveryTimeSlot;
+              if (tracking) license.aramexTrackingNumber = tracking;
+            }
+            sendJson(res, { success: true, message: "Payment completed successfully. Your license has been issued.", data: { application: app, license } });
+            return;
+          }
+
+          if (method === "POST" && path.match(/^\/licenses\/[^/]+\/delivery\/aramex$/)) {
+            const id = path.split("/")[2];
+            const found = findApplicationOrLicense(id);
+            const body = await readJson(req);
+            if (!found?.app && !found?.license) {
+              sendJson(res, { message: "License or application not found." }, 404);
+              return;
+            }
+            const app = found.app;
+            if (app && !paymentEligible(app)) {
+              sendJson(res, { message: "Application must be approved before delivery can be requested." }, 409);
+              return;
+            }
+            const deliveryAddress = asString(body.deliveryAddress).trim();
+            const deliveryCity = asString(body.deliveryCity).trim();
+            const deliveryPhone = asString(body.deliveryPhone).trim();
+            const deliveryLocationLink = asString(body.deliveryLocationLink).trim();
+            const deliveryDate = asString(body.deliveryDate).trim();
+            const deliveryTimeSlot = asString(body.deliveryTimeSlot).trim();
+            if (deliveryAddress.length < 10) {
+              sendJson(res, { message: "Delivery address must be at least 10 characters." }, 400);
+              return;
+            }
+            if (!deliveryCity) {
+              sendJson(res, { message: "Delivery city is required." }, 400);
+              return;
+            }
+            if (!/^(?:07[789]\d{7}|\+9627[789]\d{7})$/.test(deliveryPhone)) {
+              sendJson(res, { message: "Enter a valid Jordanian phone number." }, 400);
+              return;
+            }
+            if (!/^https?:\/\/.+/i.test(deliveryLocationLink)) {
+              sendJson(res, { message: "A valid location link is required." }, 400);
+              return;
+            }
+            if (!deliveryDate || !deliveryTimeSlot) {
+              sendJson(res, { message: "Delivery date and time slot are required." }, 400);
+              return;
+            }
+            const isPaid = (found.license?.paymentStatus ?? app?.paymentStatus) === "paid";
+            const tracking = isPaid ? found.license?.aramexTrackingNumber ?? app?.aramexTrackingNumber ?? generateMockAramexTrackingNumber() : found.license?.aramexTrackingNumber ?? app?.aramexTrackingNumber;
+            const deliveryStatus = isPaid ? "payment_confirmed" : "pending_payment";
+            for (const target of [app, found.license].filter(Boolean)) {
+              target.deliveryMethod = "aramex";
+              target.deliveryAddress = deliveryAddress;
+              target.deliveryCity = deliveryCity;
+              target.deliveryPhone = deliveryPhone;
+              target.deliveryLocationLink = deliveryLocationLink;
+              target.deliveryDate = deliveryDate;
+              target.deliveryTimeSlot = deliveryTimeSlot;
+              target.deliveryStatus = deliveryStatus;
+              if (tracking) target.aramexTrackingNumber = tracking;
+            }
+            sendJson(res, { application: app, license: found.license ?? null });
             return;
           }
 
@@ -558,6 +709,36 @@ function publicUser(user: DemoUser) {
   return safeUser;
 }
 
+function compactDate() {
+  const date = new Date();
+  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function generateEfawateercomReference() {
+  for (let i = 0; i < 8; i += 1) {
+    const reference = `RKH-${compactDate()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    if (!applications.some((item) => item.paymentReference === reference) && !licenses.some((item) => item.paymentReference === reference)) return reference;
+  }
+  return `RKH-${compactDate()}-${String(Date.now()).slice(-6)}`;
+}
+
+function generateMockAramexTrackingNumber() {
+  return `ARX${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+}
+
+function paymentEligible(app: any) {
+  return ["PRACTICAL_PASSED", "LICENSE_ISSUANCE", "LICENSE_ISSUED"].includes(app?.status ?? "");
+}
+
+function findApplicationOrLicense(id: string) {
+  const license = licenses.find((item) => item.id === id);
+  if (license) {
+    return { license, app: applications.find((item) => item.id === license.applicationId) ?? null };
+  }
+  const app = applications.find((item) => item.id === id);
+  return app ? { app, license: licenses.find((item) => item.applicationId === app.id) ?? null } : null;
+}
+
 function applicationDetail(app: (typeof applications)[number]) {
   const owner = demoUsers.find((item) => item.id === app.userId) ?? demoUsers[1];
   const service = services.find((item) => item.id === app.serviceId) ?? services[0];
@@ -572,11 +753,12 @@ function applicationDetail(app: (typeof applications)[number]) {
     licenseCategory,
     profile: owner.profile,
     user: { id: owner.id, email: owner.email },
-    documents: [],
+    documents: documents.filter((item) => item.applicationId === app.id),
     appointments: appAppointments,
     trainingRecord: null,
     medicalTest: appMedicalTest,
     exams: appExams,
+    license: licenseForApplication(app.id),
     steps: stepper(app),
   };
 }
@@ -587,6 +769,8 @@ function updateSecurityApplication(id: string, action: string | undefined, note 
   if (app.status !== "SECURITY_REVIEW") return app;
 
   if (action === "approve") {
+    const certificate = documents.find((item) => item.applicationId === app.id && item.documentType === "TRAINING_CERTIFICATE");
+    if (!certificate) return app;
     app.status = "SECURITY_APPROVED";
     app.currentStep = "MEDICAL_BOOKING";
     addNotification(app.userId, "Security review approved", "تمت الموافقة على طلبك، يرجى الانتقال للمرحلة التالية وحجز موعد فحص النظر.");
@@ -801,6 +985,20 @@ function issueLicense(app: any) {
     address: owner.profile.address,
     governorate: owner.profile.governorate,
     qrCodeUrl: JSON.stringify({ licenseNumber, nationalId: owner.profile.nationalId, issueDate: issue, status: "ACTIVE" }),
+    paymentMethod: app.paymentMethod,
+    paymentStatus: app.paymentStatus ?? "unpaid",
+    paymentAmount: app.paymentAmount ?? "3.00",
+    paymentReference: app.paymentReference,
+    paymentPaidAt: app.paymentPaidAt,
+    deliveryMethod: app.deliveryMethod,
+    deliveryStatus: app.deliveryStatus ?? "not_requested",
+    deliveryAddress: app.deliveryAddress,
+    deliveryCity: app.deliveryCity,
+    deliveryPhone: app.deliveryPhone,
+    deliveryLocationLink: app.deliveryLocationLink,
+    deliveryDate: app.deliveryDate,
+    deliveryTimeSlot: app.deliveryTimeSlot,
+    aramexTrackingNumber: app.aramexTrackingNumber,
   };
   licenses.unshift(license);
   return license;

@@ -5,6 +5,7 @@ import {
   getGetApplicationQueryKey,
   useListCenters,
   getListCentersQueryKey,
+  getGetMyLicenseQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -18,8 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope, Route, Sparkles } from "lucide-react";
+import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope, Route, Sparkles, CreditCard, Truck } from "lucide-react";
 import { currentStepLabel, isMedicalBookingRequired, isPracticalBookingRequired, isTheoryBookingRequired, statusLabel } from "./application-utils";
+import { DigitalLicenseCard } from "./digital-license-card";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
@@ -55,6 +57,47 @@ function StepIcon({ status }: { status: string }) {
   return <Circle className="w-5 h-5 text-slate-300" />;
 }
 
+function authHeaders() {
+  return {
+    accept: "application/json",
+    "content-type": "application/json",
+    authorization: `Bearer ${localStorage.getItem("rukhsty_token") ?? ""}`,
+  };
+}
+
+function generateReferencePreview() {
+  const date = new Date();
+  const compact = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+  return `RKH-${compact}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function isLicensePaymentEligible(status?: string) {
+  return ["PRACTICAL_PASSED", "LICENSE_ISSUANCE", "LICENSE_ISSUED"].includes(status ?? "");
+}
+
+function paymentStatusLabel(status: string | null | undefined, language: "en" | "ar") {
+  if (status === "paid") return language === "ar" ? "مدفوع" : "Paid";
+  return language === "ar" ? "بانتظار الدفع" : "Pending Payment";
+}
+
+function deliveryStatusLabel(status: string | null | undefined, language: "en" | "ar") {
+  const labels: Record<string, { en: string; ar: string }> = {
+    not_requested: { en: "Not requested", ar: "غير مطلوب" },
+    pending_payment: { en: "Pending payment", ar: "بانتظار الدفع" },
+    payment_confirmed: { en: "Payment confirmed", ar: "تم تأكيد الدفع" },
+    preparing: { en: "Preparing", ar: "قيد التجهيز" },
+    shipped: { en: "Shipped", ar: "تم الشحن" },
+    delivered: { en: "Delivered", ar: "تم التسليم" },
+    failed: { en: "Failed", ar: "فشل" },
+  };
+  const item = labels[status ?? "not_requested"] ?? labels.not_requested;
+  return language === "ar" ? item.ar : item.en;
+}
+
+function validJordanPhone(phone: string) {
+  return /^(?:07[789]\d{7}|\+9627[789]\d{7})$/.test(phone.trim());
+}
+
 export default function ApplicationDetail({ params }: { params: { id: string } }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -63,11 +106,21 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
   const [selectedCenterId, setSelectedCenterId] = useState("");
   const [appointmentDate, setAppointmentDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [paymentApplication, setPaymentApplication] = useState<any>(null);
+  const [paymentLicense, setPaymentLicense] = useState<any>(null);
+  const [referencePreview] = useState(generateReferencePreview);
   const { data: app, isLoading } = useGetApplication(params.id, {
     query: { queryKey: getGetApplicationQueryKey(params.id), enabled: !!params.id },
   });
   const bookAppointment = useBookAppointment();
-  const detail = app as any;
+  const rawDetail = app as any;
+  const detail = paymentApplication ? { ...rawDetail, ...paymentApplication, license: paymentLicense ?? paymentApplication.license ?? rawDetail?.license } : rawDetail;
   const booking = getBookingConfig(detail?.currentStep);
   const centersParams = {
     centerType: booking?.centerType,
@@ -101,6 +154,15 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
   const progressPercent = orderedSteps.length > 0 ? Math.round((completedSteps / orderedSteps.length) * 100) : 0;
   const appointments = detail.appointments ?? [];
   const exams = detail.exams ?? [];
+  const displayLicense = paymentLicense ?? detail.license ?? null;
+  const paymentStatus = displayLicense?.paymentStatus ?? detail.paymentStatus ?? "unpaid";
+  const isPaid = paymentStatus === "paid";
+  const showPaymentCard = isLicensePaymentEligible(detail.status) && !isPaid;
+  const showIssuedLicense = Boolean(displayLicense) && (detail.status === "LICENSE_ISSUED" || isPaid);
+  const deliveryMethod = displayLicense?.deliveryMethod ?? detail.deliveryMethod;
+  const deliveryStatus = displayLicense?.deliveryStatus ?? detail.deliveryStatus;
+  const aramexTrackingNumber = displayLicense?.aramexTrackingNumber ?? detail.aramexTrackingNumber;
+  const referenceNumber = displayLicense?.paymentReference ?? detail.paymentReference ?? referencePreview;
 
   const handleBookAppointment = async () => {
     if (!booking || !selectedCenterId || !appointmentDate || !startTime) {
@@ -128,6 +190,66 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
       setSelectedCenterId("");
     } catch (error) {
       toast({ variant: "destructive", title: "Booking failed", description: error instanceof Error ? error.message : "Please try again." });
+    }
+  };
+
+  const handleMockPayment = async () => {
+    const targetId = detail.license?.id ?? detail.id;
+    setPaymentLoading(true);
+    try {
+      const response = await fetch(`/api/licenses/${targetId}/mock-pay`, {
+        method: "PATCH",
+        headers: authHeaders(),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.message ?? "Payment failed");
+      setPaymentApplication(result?.data?.application ?? detail);
+      setPaymentLicense(result?.data?.license ?? detail.license ?? null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetApplicationQueryKey(params.id) }),
+        queryClient.invalidateQueries({ queryKey: getGetMyLicenseQueryKey() }),
+      ]);
+      toast({ title: language === "ar" ? "تم الدفع بنجاح، وتم إصدار رخصتك." : "Payment completed successfully. Your license has been issued." });
+    } catch (error) {
+      toast({ variant: "destructive", title: language === "ar" ? "فشل الدفع" : "Payment failed", description: error instanceof Error ? error.message : "Please try again." });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleAramexDelivery = async () => {
+    if (deliveryAddress.trim().length < 10) {
+      toast({ variant: "destructive", title: language === "ar" ? "العنوان مطلوب" : "Address is required", description: language === "ar" ? "أدخل عنواناً من 10 أحرف على الأقل." : "Enter at least 10 characters." });
+      return;
+    }
+    if (!deliveryCity.trim()) {
+      toast({ variant: "destructive", title: language === "ar" ? "المدينة مطلوبة" : "City is required" });
+      return;
+    }
+    if (!validJordanPhone(deliveryPhone)) {
+      toast({ variant: "destructive", title: language === "ar" ? "رقم الهاتف غير صحيح" : "Invalid phone number", description: "0791234567, 0781234567, 0771234567, or +962..." });
+      return;
+    }
+
+    const targetId = detail.license?.id ?? detail.id;
+    setDeliveryLoading(true);
+    try {
+      const response = await fetch(`/api/licenses/${targetId}/delivery/aramex`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ deliveryAddress, deliveryCity, deliveryPhone }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.message ?? "Delivery request failed");
+      setPaymentApplication(result?.application ?? detail);
+      setPaymentLicense(result?.license ?? detail.license ?? null);
+      setShowDeliveryForm(false);
+      await queryClient.invalidateQueries({ queryKey: getGetApplicationQueryKey(params.id) });
+      toast({ title: language === "ar" ? "تم حفظ طلب التوصيل" : "Delivery request saved" });
+    } catch (error) {
+      toast({ variant: "destructive", title: language === "ar" ? "فشل طلب التوصيل" : "Delivery request failed", description: error instanceof Error ? error.message : "Please try again." });
+    } finally {
+      setDeliveryLoading(false);
     }
   };
 
@@ -303,6 +425,106 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {(showIssuedLicense || showPaymentCard || isLicensePaymentEligible(detail.status)) && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="overflow-hidden border-emerald-100 bg-white shadow-sm">
+            <CardHeader className="border-b bg-emerald-50/70">
+              <CardTitle className="flex items-center gap-2 text-base text-emerald-900">
+                <CreditCard className="h-5 w-5" />
+                {language === "ar" ? "الدفع والتوصيل" : "Payment and Delivery"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5 p-5">
+              {showIssuedLicense && (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3 sm:p-5">
+                  <DigitalLicenseCard license={displayLicense} />
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">{language === "ar" ? "طريقة الدفع" : "Payment method"}</p>
+                  <p className="mt-1 font-semibold">eFAWATEERcom</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">{language === "ar" ? "رقم المرجع" : "Reference Number"}</p>
+                  <p className="mt-1 font-mono text-sm font-semibold">{referenceNumber}</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">{language === "ar" ? "المبلغ" : "Amount"}</p>
+                  <p className="mt-1 font-semibold">3.00 JOD</p>
+                </div>
+                <div className="rounded-xl border bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">{language === "ar" ? "حالة الدفع" : "Payment Status"}</p>
+                  <Badge className={`mt-2 ${isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {paymentStatusLabel(paymentStatus, language)}
+                  </Badge>
+                </div>
+              </div>
+
+              {showPaymentCard && (
+                <div className="rounded-2xl border border-emerald-200 bg-white p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="font-semibold text-emerald-950">{language === "ar" ? "ادفع رسوم الرخصة عبر إي فواتيركم" : "Pay License Fees via eFAWATEERcom"}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {language === "ar" ? "هذا دفع تجريبي للعرض فقط ولا ينتقل إلى أي موقع خارجي." : "This is a graduation-demo payment. No external payment website will open."}
+                      </p>
+                    </div>
+                    <Button onClick={handleMockPayment} disabled={paymentLoading} className="bg-emerald-700 hover:bg-emerald-800">
+                      {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-2xl border p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="flex items-center gap-2 font-semibold text-emerald-950">
+                      <Truck className="h-4 w-4" />
+                      {language === "ar" ? "التوصيل عبر أرامكس" : "Aramex Delivery"}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {deliveryMethod === "aramex"
+                        ? language === "ar" ? "تم اختيار التوصيل عبر أرامكس." : "Aramex delivery has been selected."
+                        : language === "ar" ? "اختياري ولا يمنع إصدار الرخصة." : "Optional and does not block license issuing."}
+                    </p>
+                  </div>
+                  {deliveryMethod !== "aramex" && (
+                    <Link href={`/delivery/aramex/${displayLicense?.id ?? detail.id}`}>
+                      <Button variant="outline">
+                        {language === "ar" ? "التوصيل عبر أرامكس" : "Deliver by Aramex"}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                {deliveryMethod === "aramex" && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-muted-foreground">{language === "ar" ? "طريقة التوصيل" : "Delivery Method"}</p>
+                      <p className="mt-1 font-medium">Aramex</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-muted-foreground">{language === "ar" ? "حالة التوصيل" : "Delivery Status"}</p>
+                      <p className="mt-1 font-medium">{deliveryStatusLabel(deliveryStatus, language)}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs text-muted-foreground">{language === "ar" ? "رقم التتبع" : "Tracking Number"}</p>
+                      <Link href={`/delivery/aramex/${displayLicense?.id ?? detail.id}`}>
+                        <p className="mt-1 cursor-pointer font-mono text-sm font-medium text-emerald-700 underline-offset-4 hover:underline">{aramexTrackingNumber || (language === "ar" ? "فتح التوصيل" : "Open delivery")}</p>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       {/* Training Record */}
