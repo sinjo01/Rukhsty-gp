@@ -167,11 +167,14 @@ export default function OfficerDashboard() {
   const openTheoryDialog = (app: any) => {
     setSelectedApplication(app);
     setSelectedMode("theory");
-    const latestAttempt = app.exams?.filter((exam: any) => exam.examType === "THEORY").slice(-1)[0];
-    setIsEditingResult(!latestAttempt);
-    setExamResult(latestAttempt?.result ?? "");
-    setScore(latestAttempt?.score?.toString() ?? "");
-    setNotes(latestAttempt?.notes ?? "");
+    const hasBookedRetake = app.appointments?.some((appointment: any) => appointment.appointmentType === "THEORY_EXAM" && appointment.status === "BOOKED");
+    const latestAttempt = [...(app.exams ?? [])]
+      .filter((exam: any) => exam.examType === "THEORY")
+      .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+    setIsEditingResult(hasBookedRetake || !latestAttempt);
+    setExamResult(hasBookedRetake ? "" : latestAttempt?.result ?? "");
+    setScore(hasBookedRetake ? "" : latestAttempt?.score?.toString() ?? "");
+    setNotes(hasBookedRetake ? "" : latestAttempt?.notes ?? "");
     setVerification({
       photoMatched: false,
       nationalIdVerified: false,
@@ -183,18 +186,23 @@ export default function OfficerDashboard() {
   const openPracticalDialog = (app: any) => {
     setSelectedApplication(app);
     setSelectedMode("practical");
-    const latestAttempt = app.exams?.filter((exam: any) => exam.examType === "PRACTICAL").slice(-1)[0];
-    setIsEditingResult(!latestAttempt);
+    const hasBookedRetake = app.appointments?.some((appointment: any) => appointment.appointmentType === "PRACTICAL_EXAM" && appointment.status === "BOOKED");
+    const latestAttempt = [...(app.exams ?? [])]
+      .filter((exam: any) => exam.examType === "PRACTICAL")
+      .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+    setIsEditingResult(hasBookedRetake || !latestAttempt);
     let nextChecklist: Record<string, boolean> = {};
     let nextNotes = "";
-    try {
-      const parsed = latestAttempt?.notes ? JSON.parse(latestAttempt.notes) : null;
-      nextNotes = parsed?.notes ?? latestAttempt?.notes ?? "";
-      if (Array.isArray(parsed?.checklist)) {
-        nextChecklist = Object.fromEntries(parsed.checklist.map((item: any) => [item.key, Boolean(item.checked)]));
+    if (!hasBookedRetake) {
+      try {
+        const parsed = latestAttempt?.notes ? JSON.parse(latestAttempt.notes) : null;
+        nextNotes = parsed?.notes ?? latestAttempt?.notes ?? "";
+        if (Array.isArray(parsed?.checklist)) {
+          nextChecklist = Object.fromEntries(parsed.checklist.map((item: any) => [item.key, Boolean(item.checked)]));
+        }
+      } catch {
+        nextNotes = latestAttempt?.notes ?? "";
       }
-    } catch {
-      nextNotes = latestAttempt?.notes ?? "";
     }
     setNotes(nextNotes);
     setPracticalChecklist(nextChecklist);
@@ -367,17 +375,29 @@ export default function OfficerDashboard() {
     ?? selectedApplication?.appointments?.find((apt: any) => apt.appointmentType === selectedAppointmentType)
     ?? selectedApplication?.appointments?.[0];
   const medicalTest = selectedApplication?.medicalTest;
-  const latestTheoryExam = selectedApplication?.exams?.filter((exam: any) => exam.examType === "THEORY").at?.(-1)
-    ?? selectedApplication?.exams?.filter((exam: any) => exam.examType === "THEORY").slice(-1)[0];
-  const latestPracticalExam = selectedApplication?.exams?.filter((exam: any) => exam.examType === "PRACTICAL").at?.(-1)
-    ?? selectedApplication?.exams?.filter((exam: any) => exam.examType === "PRACTICAL").slice(-1)[0];
+  const latestTheoryExam = [...(selectedApplication?.exams ?? [])]
+    .filter((exam: any) => exam.examType === "THEORY")
+    .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+  const latestPracticalExam = [...(selectedApplication?.exams ?? [])]
+    .filter((exam: any) => exam.examType === "PRACTICAL")
+    .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+  const hasBookedCurrentAttempt = Boolean(
+    selectedApplication?.appointments?.some(
+      (appointment: any) => appointment.appointmentType === selectedAppointmentType && appointment.status === "BOOKED",
+    ),
+  );
   const hasSavedResult = selectedMode === "medical"
     ? Boolean(medicalTest)
     : selectedMode === "theory"
-    ? Boolean(latestTheoryExam)
+    ? Boolean(latestTheoryExam) && !hasBookedCurrentAttempt
     : selectedMode === "practical"
-    ? Boolean(latestPracticalExam)
+    ? Boolean(latestPracticalExam) && !hasBookedCurrentAttempt
     : false;
+  const currentAttemptNumber = selectedMode === "theory"
+    ? Math.max(1, selectedApplication?.appointments?.filter((appointment: any) => appointment.appointmentType === "THEORY_EXAM" && appointment.status !== "CANCELLED").length ?? 0)
+    : selectedMode === "practical"
+    ? Math.max(1, selectedApplication?.appointments?.filter((appointment: any) => appointment.appointmentType === "PRACTICAL_EXAM" && appointment.status !== "CANCELLED").length ?? 0)
+    : 1;
   const fieldsDisabled = !isEditingResult;
 
   return (
@@ -564,9 +584,9 @@ export default function OfficerDashboard() {
             <DialogTitle className="flex items-center gap-2">
               {selectedMode === "practical" ? <Car className="w-5 h-5 text-emerald-700" /> : selectedMode === "theory" ? <BookOpen className="w-5 h-5 text-emerald-700" /> : <Stethoscope className="w-5 h-5 text-purple-600" />}
               {selectedMode === "theory"
-                ? language === "ar" ? "التحقق من طلب الامتحان النظري" : "Theory Exam Application Verification"
+                ? language === "ar" ? `التحقق من محاولة الامتحان النظري رقم ${currentAttemptNumber}` : `Theory Exam Attempt ${currentAttemptNumber} Verification`
                 : selectedMode === "practical"
-                ? language === "ar" ? "نتيجة الامتحان العملي" : "Practical Exam Result"
+                ? language === "ar" ? `نتيجة محاولة الامتحان العملي رقم ${currentAttemptNumber}` : `Practical Exam Attempt ${currentAttemptNumber} Result`
                 : language === "ar" ? "تسجيل نتيجة فحص النظر" : "Record Medical / Vision Test Result"}
             </DialogTitle>
           </DialogHeader>
@@ -660,7 +680,7 @@ export default function OfficerDashboard() {
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">{language === "ar" ? "آخر محاولة نظرية" : "Latest Theory Attempt"}</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{hasBookedCurrentAttempt ? (language === "ar" ? "المحاولة النظرية السابقة" : "Previous Theory Attempt") : (language === "ar" ? "آخر محاولة نظرية" : "Latest Theory Attempt")}</CardTitle></CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <p><span className="text-muted-foreground">{language === "ar" ? "النتيجة:" : "Result:"}</span> <strong>{latestTheoryExam?.result ?? "—"}</strong></p>
                     <p><span className="text-muted-foreground">{language === "ar" ? "العلامة:" : "Score:"}</span> {latestTheoryExam?.score ? `${latestTheoryExam.score} / ${latestTheoryExam.maxScore ?? 100}` : "—"}</p>
@@ -692,12 +712,12 @@ export default function OfficerDashboard() {
               <div className="grid gap-4 md:grid-cols-[1fr_160px]">
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">{language === "ar" ? "نتيجة الامتحان النظري" : "Theory result"} <span className="text-red-500">*</span></Label>
-                  <RadioGroup value={examResult} onValueChange={setExamResult} disabled={fieldsDisabled} className="grid gap-2 sm:grid-cols-2">
+                  <RadioGroup value={examResult} disabled className="grid gap-2 sm:grid-cols-2">
                     {[
                       { value: "PASSED", en: "Passed", ar: "ناجح" },
                       { value: "FAILED", en: "Failed", ar: "راسب" },
                     ].map((option) => (
-                      <Label key={option.value} className={`flex items-center gap-2 rounded-xl border p-3 text-sm ${fieldsDisabled ? "cursor-default opacity-75" : "cursor-pointer"} ${examResult === option.value ? "border-emerald-600 bg-emerald-50" : "hover:bg-muted/50"}`}>
+                      <Label key={option.value} className={`flex cursor-default items-center gap-2 rounded-xl border p-3 text-sm ${examResult === option.value ? "border-emerald-600 bg-emerald-50 opacity-100" : "opacity-75"}`}>
                         <RadioGroupItem value={option.value} />
                         <span>{language === "ar" ? option.ar : option.en}</span>
                       </Label>
@@ -706,7 +726,24 @@ export default function OfficerDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="theory-score">{language === "ar" ? "العلامة" : "Score"} <span className="text-muted-foreground">(0-100)</span></Label>
-                  <Input id="theory-score" type="number" min={0} max={100} value={score} onChange={(event) => setScore(event.target.value)} disabled={fieldsDisabled} placeholder="0" />
+                  <Input
+                    id="theory-score"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={score}
+                    onChange={(event) => {
+                      const nextScore = event.target.value;
+                      setScore(nextScore);
+                      const numericScore = Number(nextScore);
+                      setExamResult(nextScore !== "" && Number.isFinite(numericScore) ? (numericScore >= 70 ? "PASSED" : "FAILED") : "");
+                    }}
+                    disabled={fieldsDisabled}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {language === "ar" ? "يحدد النظام النتيجة تلقائياً: 70 فأكثر ناجح." : "The system determines the result automatically: 70 or above is Passed."}
+                  </p>
                 </div>
               </div>
 

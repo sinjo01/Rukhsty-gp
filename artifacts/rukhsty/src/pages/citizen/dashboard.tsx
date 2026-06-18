@@ -16,9 +16,9 @@ import { currentStepLabel, isMedicalBookingRequired, isPracticalBookingRequired,
 import { DigitalLicenseCard } from "./digital-license-card";
 
 const SERVICES = [
-  { title: "Issue Driving License", titleAr: "استخراج رخصة قيادة", href: "/services/issue-driving-license", icon: IdCard, description: "Apply for a new driving license", gradient: "from-emerald-500 to-teal-600", glow: "bg-emerald-500/20" },
-  { title: "Renew License", titleAr: "تجديد الرخصة", href: "/services/renew-driving-license", icon: RefreshCw, description: "Renew your existing license", gradient: "from-sky-500 to-indigo-600", glow: "bg-sky-500/20" },
-  { title: "Vehicle Registration", titleAr: "تجديد ترخيص المركبة", href: "/services/renew-vehicle-registration", icon: Car, description: "Renew vehicle registration", gradient: "from-amber-500 to-orange-600", glow: "bg-amber-500/20" },
+  { title: { en: "Issue Driving License", ar: "إصدار رخصة قيادة" }, href: "/services/issue-driving-license", icon: IdCard, description: { en: "Apply for a new driving license", ar: "قدّم طلباً لإصدار رخصة قيادة جديدة" }, gradient: "from-emerald-500 to-teal-600", glow: "bg-emerald-500/20" },
+  { title: { en: "Renew License", ar: "تجديد رخصة القيادة" }, href: "/services/renew-driving-license", icon: RefreshCw, description: { en: "Renew your existing license", ar: "جدّد رخصة القيادة الحالية" }, gradient: "from-sky-500 to-indigo-600", glow: "bg-sky-500/20" },
+  { title: { en: "Vehicle Registration", ar: "تجديد ترخيص المركبة" }, href: "/services/renew-vehicle-registration", icon: Car, description: { en: "Renew vehicle registration", ar: "جدّد ترخيص مركبتك" }, gradient: "from-amber-500 to-orange-600", glow: "bg-amber-500/20" },
 ];
 
 function dashboardReferencePreview() {
@@ -52,8 +52,8 @@ export default function Dashboard() {
 
   const firstName = user?.profile?.firstName ?? user?.email?.split("@")[0] ?? "Citizen";
   const issuedLicense = paidLicense ?? (summary as any)?.myLicense;
-  const hasIssuedLicense = Boolean(issuedLicense?.status === "ACTIVE" || issuedLicense);
   const isLicensePaid = issuedLicense?.paymentStatus === "paid";
+  const hasIssuedLicense = Boolean(issuedLicense && isLicensePaid);
   const showDashboardPayment = Boolean(issuedLicense?.id && !isLicensePaid);
   const activeApplication = (summary as any)?.activeApplication;
   const isRenewalApplication = activeApplication?.service?.code === "RENEW_DRIVING_LICENSE" || String(activeApplication?.status ?? "").startsWith("RENEWAL_") || activeApplication?.status === "LICENSE_RENEWED";
@@ -88,14 +88,18 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Welcome back, {firstName}</h1>
-            <p className="text-muted-foreground text-sm mt-1" dir="rtl">أهلاً وسهلاً بك في منصة رخصتي</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {language === "ar" ? `مرحباً بعودتك، ${firstName}` : `Welcome back, ${firstName}`}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {language === "ar" ? "أهلاً وسهلاً بك في منصة رخصتي" : "Welcome to your Rukhsty account"}
+            </p>
           </div>
           {unread.length > 0 && (
             <Link href="/notifications">
               <Button variant="outline" size="sm" className="gap-2">
                 <Bell className="w-4 h-4 text-amber-500" />
-                {unread.length} unread notification{unread.length !== 1 ? "s" : ""}
+                {language === "ar" ? `${unread.length} إشعار غير مقروء` : `${unread.length} unread notification${unread.length !== 1 ? "s" : ""}`}
               </Button>
             </Link>
           )}
@@ -109,7 +113,7 @@ export default function Dashboard() {
             { label: language === "ar" ? "الطلبات" : "Applications", value: summary?.totalApplications ?? 0, icon: FileText, gradient: "from-sky-500 to-blue-600" },
             { label: language === "ar" ? "المواعيد" : "Appointments", value: summary?.upcomingAppointments ?? 0, icon: Calendar, gradient: "from-emerald-500 to-teal-600" },
             { label: language === "ar" ? "الإشعارات" : "Notifications", value: summary?.unreadNotifications ?? 0, icon: Bell, gradient: "from-amber-500 to-orange-600" },
-            { label: language === "ar" ? "الرخصة" : "License", value: hasIssuedLicense ? (language === "ar" ? "سارية" : "Active") : (language === "ar" ? "لا يوجد" : "None"), icon: CreditCard, gradient: "from-violet-500 to-purple-600" },
+            { label: language === "ar" ? "الرخصة" : "License", value: hasIssuedLicense ? (language === "ar" ? "سارية" : "Active") : showDashboardPayment ? (language === "ar" ? "بانتظار الدفع" : "Pending Payment") : (language === "ar" ? "لا يوجد" : "None"), icon: CreditCard, gradient: "from-violet-500 to-purple-600" },
           ] as Array<{ label: string; value: React.ReactNode; icon: React.ComponentType<{ className?: string }>; gradient: string }>
         ).map((stat, i) => (
           <Card key={i} className="rounded-2xl border-border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
@@ -156,17 +160,14 @@ export default function Dashboard() {
           <span className="rukhsty-firework right-[22%] bottom-[22%]" />
           <div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1fr)_640px] xl:items-center">
             <div>
-              <Badge className="bg-amber-200 text-emerald-950 hover:bg-amber-200">LICENSE ISSUED</Badge>
-              <h2 className="mt-3 text-3xl font-bold tracking-normal">Congratulations!</h2>
+              <Badge className="bg-amber-200 text-emerald-950 hover:bg-amber-200">{language === "ar" ? "تم إصدار الرخصة" : "LICENSE ISSUED"}</Badge>
+              <h2 className="mt-3 text-3xl font-bold tracking-normal">{language === "ar" ? "تهانينا!" : "Congratulations!"}</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/75">
-                Your driving license is active and ready. The digital card below carries your photo, license information, category, dates, and verification QR.
+                {language === "ar"
+                  ? "رخصة القيادة الخاصة بك سارية وجاهزة. تحتوي البطاقة الرقمية أدناه على صورتك ومعلومات الرخصة والفئة والتواريخ ورمز التحقق."
+                  : "Your driving license is active and ready. The digital card below carries your photo, license information, category, dates, and verification QR."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {showDashboardPayment && (
-                  <Button onClick={handleDashboardPayment} disabled={paymentLoading} className="bg-white text-emerald-950 hover:bg-amber-50">
-                    {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
-                  </Button>
-                )}
                 {isLicensePaid && (
                   <Badge className="bg-emerald-100 px-4 py-2 text-emerald-800 hover:bg-emerald-100">
                     {language === "ar" ? "مدفوع" : "Paid"}
@@ -176,7 +177,7 @@ export default function Dashboard() {
                   <Button className="bg-white text-emerald-950 hover:bg-amber-50">
                     {issuedLicense.deliveryMethod === "aramex"
                       ? issuedLicense.aramexTrackingNumber
-                        ? `Aramex ${issuedLicense.aramexTrackingNumber}`
+                        ? `${language === "ar" ? "أرامكس" : "Aramex"} ${issuedLicense.aramexTrackingNumber}`
                         : language === "ar" ? "تعديل توصيل أرامكس" : "Edit Aramex Delivery"
                       : language === "ar" ? "التوصيل عبر أرامكس" : "Deliver by Aramex"}
                   </Button>
@@ -209,6 +210,9 @@ export default function Dashboard() {
                 <h2 className="mt-3 text-xl font-bold text-emerald-950">
                   {language === "ar" ? "ادفع رسوم الرخصة عبر إي فواتيركم" : "Pay License Fees via eFAWATEERcom"}
                 </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {language === "ar" ? "ستظهر الرخصة الرقمية ورمز التحقق وخيارات التوصيل بعد إتمام الدفع." : "Your digital license, verification QR, and delivery options will appear after payment."}
+                </p>
                 <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
                   <span><strong>{language === "ar" ? "الطريقة:" : "Method:"}</strong> eFAWATEERcom</span>
                   <span><strong>{language === "ar" ? "المرجع:" : "Reference:"}</strong> <span className="font-mono">{paymentReference}</span></span>
@@ -353,9 +357,8 @@ export default function Dashboard() {
                   <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg transition-transform duration-300 group-hover:scale-105", svc.gradient, isRTL && "ml-auto")}>
                     <svc.icon className="w-6 h-6" />
                   </div>
-                  <p className="mt-4 font-semibold text-sm">{svc.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5" dir="rtl">{svc.titleAr}</p>
-                  <p className="text-xs text-muted-foreground mt-2">{svc.description}</p>
+                  <p className="mt-4 font-semibold text-sm">{svc.title[language]}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{svc.description[language]}</p>
                   <span className={cn("mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary opacity-0 transition-all duration-300 group-hover:opacity-100", isRTL && "flex-row-reverse")}>
                     {language === "ar" ? "ابدأ الخدمة" : "Start service"}
                     <ArrowRight className={cn("w-3.5 h-3.5", isRTL && "rotate-180")} />

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, CalendarDays, CheckCircle, Clock, MapPin, Car } from "lucide-react";
-import { currentStepLabel, isPracticalBookingRequired, STATUS_COLORS, statusLabel } from "./application-utils";
+import { currentStepLabel, examRebookingInfo, isPracticalBookingRequired, practicalBookingInfo, STATUS_COLORS, statusLabel } from "./application-utils";
 
 const GOVERNORATES = ["Amman", "Zarqa", "Irbid", "Balqa", "Madaba", "Karak", "Mafraq", "Jerash", "Ajloun", "Tafilah", "Ma'an", "Aqaba"];
 
@@ -40,6 +40,17 @@ export default function BookPractical({ params }: { params: { id: string } }) {
     query: { queryKey: getGetApplicationQueryKey(params.id), enabled: !!params.id },
   });
   const detail = app as any;
+  const rebooking = examRebookingInfo(detail);
+  const firstPracticalBooking = practicalBookingInfo(detail);
+  const eligibilityDate = rebooking?.earliestDate ?? firstPracticalBooking?.earliestDate;
+  const minimumDate = eligibilityDate && eligibilityDate > todayIso() ? eligibilityDate : todayIso();
+
+  useEffect(() => {
+    if (date < minimumDate) {
+      setDate(minimumDate);
+      setSelectedSlot("");
+    }
+  }, [date, minimumDate]);
 
   useEffect(() => {
     const defaultGovernorate = detail?.governorate || user?.profile?.governorate || "Amman";
@@ -169,6 +180,32 @@ export default function BookPractical({ params }: { params: { id: string } }) {
         </Card>
       )}
 
+      {rebooking && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm text-red-900">
+            <p className="font-semibold">{language === "ar" ? "لم يتم اجتياز الامتحان العملي" : "Practical exam was not passed"}</p>
+            <p className="mt-1">
+              {language === "ar"
+                ? `يمكنك اختيار موعد جديد بتاريخ ${rebooking.earliestDate} أو بعده، أي بعد 14 يوماً من الامتحان السابق.`
+                : `You can choose a new appointment on or after ${rebooking.earliestDate}, 14 days after the previous exam.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!rebooking && firstPracticalBooking && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4 text-sm text-blue-900">
+            <p className="font-semibold">{language === "ar" ? "موعد الامتحان العملي بعد اجتياز النظري" : "Practical exam after passing theory"}</p>
+            <p className="mt-1">
+              {language === "ar"
+                ? `يمكنك اختيار أي موعد متاح بتاريخ ${firstPracticalBooking.earliestDate} أو بعده، بعد 7 أيام من اجتياز الامتحان النظري.`
+                : `You can choose any available appointment on or after ${firstPracticalBooking.earliestDate}, 7 days after passing the theory exam.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Building2 className="h-4 w-4 text-emerald-700" />{language === "ar" ? "بيانات الحجز" : "Booking details"}</CardTitle>
@@ -186,7 +223,7 @@ export default function BookPractical({ params }: { params: { id: string } }) {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{language === "ar" ? "التاريخ" : "Date"}</label>
-              <Input type="date" min={todayIso()} value={date} onChange={(event) => { setDate(event.target.value); setSelectedSlot(""); }} />
+              <Input type="date" min={minimumDate} value={date} onChange={(event) => { setDate(event.target.value); setSelectedSlot(""); }} />
             </div>
           </div>
 

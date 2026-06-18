@@ -4,10 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { FileText, Users, Building2, CreditCard, TrendingUp, Award, XCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedGovernorate, localizedLabel } from "@/lib/locale-labels";
 
 const PIE_COLORS = ["#3b82f6","#22c55e","#f59e0b","#8b5cf6","#ec4899","#ef4444","#64748b","#06b6d4"];
 
 export default function AdminDashboard() {
+  const { language, isRTL, pick } = useLanguage();
   const { data: stats, isLoading } = useGetAdminStats({ query: { queryKey: getGetAdminStatsQueryKey() } });
   const { data: activity } = useGetRecentActivity({ query: { queryKey: getGetRecentActivityQueryKey() } });
 
@@ -22,23 +25,23 @@ export default function AdminDashboard() {
   const s = stats as any;
 
   const statCards = [
-    { label: "Total Applications", value: s?.totalApplications ?? 0, icon: FileText, gradient: "from-sky-500 to-blue-600" },
-    { label: "Pending Review", value: s?.pendingReview ?? 0, icon: TrendingUp, gradient: "from-amber-500 to-orange-600" },
-    { label: "Citizens", value: s?.totalCitizens ?? 0, icon: Users, gradient: "from-violet-500 to-purple-600" },
-    { label: "Centers", value: s?.totalCenters ?? 0, icon: Building2, gradient: "from-emerald-500 to-teal-600" },
-    { label: "Licenses Issued", value: s?.licensesIssued ?? 0, icon: CreditCard, gradient: "from-teal-500 to-emerald-600" },
-    { label: "Exams Passed", value: s?.passedExamsCount ?? 0, icon: Award, gradient: "from-green-500 to-emerald-600" },
-    { label: "Exams Failed", value: s?.failedExamsCount ?? 0, icon: XCircle, gradient: "from-rose-500 to-red-600" },
+    { label: pick("Total Applications", "إجمالي الطلبات"), value: s?.totalApplications ?? 0, icon: FileText, gradient: "from-sky-500 to-blue-600" },
+    { label: pick("Pending Review", "بانتظار المراجعة"), value: s?.pendingReview ?? 0, icon: TrendingUp, gradient: "from-amber-500 to-orange-600" },
+    { label: pick("Citizens", "المواطنون"), value: s?.totalCitizens ?? 0, icon: Users, gradient: "from-violet-500 to-purple-600" },
+    { label: pick("Centers", "المراكز"), value: s?.totalCenters ?? 0, icon: Building2, gradient: "from-emerald-500 to-teal-600" },
+    { label: pick("Licenses Issued", "الرخص الصادرة"), value: s?.licensesIssued ?? 0, icon: CreditCard, gradient: "from-teal-500 to-emerald-600" },
+    { label: pick("Exams Passed", "الامتحانات الناجحة"), value: s?.passedExamsCount ?? 0, icon: Award, gradient: "from-green-500 to-emerald-600" },
+    { label: pick("Exams Failed", "الامتحانات غير الناجحة"), value: s?.failedExamsCount ?? 0, icon: XCircle, gradient: "from-rose-500 to-red-600" },
   ];
 
-  const statusData = (s?.applicationsByStatus ?? []).map((item: any) => ({ name: item.status?.replace(/_/g, " "), value: item.count }));
-  const govData = (s?.applicationsByGovernorate ?? []).map((item: any) => ({ name: item.governorate, value: item.count }));
+  const statusData = (s?.applicationsByStatus ?? []).map((item: any) => ({ name: localizedLabel(item.status, language), value: item.count }));
+  const govData = (s?.applicationsByGovernorate ?? []).map((item: any) => ({ name: localizedGovernorate(item.governorate, language), value: item.count }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Platform overview and analytics</p>
+        <h1 className="text-2xl font-bold">{pick("Admin Dashboard", "لوحة تحكم المسؤول")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{pick("Platform overview and analytics", "نظرة عامة على المنصة والإحصاءات")}</p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -72,7 +75,7 @@ export default function AdminDashboard() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="grid md:grid-cols-2 gap-6">
         {statusData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Applications by Status</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-base">{pick("Applications by Status", "الطلبات حسب الحالة")}</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -88,14 +91,14 @@ export default function AdminDashboard() {
 
         {govData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">Applications by Governorate</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-base">{pick("Applications by Governorate", "الطلبات حسب المحافظة")}</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={govData} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Applications" />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} name={pick("Applications", "الطلبات")} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

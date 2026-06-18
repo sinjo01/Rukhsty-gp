@@ -7,6 +7,8 @@ import type { Request, Response } from "express";
 import { routeParam } from "../lib/route-params";
 
 const router = Router();
+const EXAM_REBOOK_WAIT_DAYS = 14;
+const PRACTICAL_AFTER_THEORY_WAIT_DAYS = 7;
 
 const STAGE_AFTER_BOOKING: Record<string, { status: string; currentStep: string; stepKey: string }> = {
   MEDICAL_TEST: { status: "MEDICAL_APPOINTMENT_BOOKED", currentStep: "MEDICAL_APPOINTMENT_BOOKED", stepKey: "MEDICAL_TEST" },
@@ -29,13 +31,13 @@ function addMinutes(time: string, minutesToAdd: number) {
 
 function addDays(dateValue: Date, days: number) {
   const next = new Date(dateValue);
-  next.setDate(next.getDate() + days);
-  next.setHours(0, 0, 0, 0);
+  next.setUTCHours(0, 0, 0, 0);
+  next.setUTCDate(next.getUTCDate() + days);
   return next;
 }
 
 function dateOnly(value: string) {
-  return new Date(`${value}T00:00:00`);
+  return new Date(`${value}T00:00:00.000Z`);
 }
 
 router.get("/appointments/slots", requireAuth, async (req, res) => {
@@ -94,7 +96,7 @@ router.post("/appointments", requireAuth, async (req, res) => {
   }
   if (appointmentType === "THEORY_EXAM" && app.status === "THEORY_FAILED") {
     const [latestFailed] = await db.select().from(examsTable).where(and(eq(examsTable.applicationId, applicationId), eq(examsTable.examType, "THEORY"), eq(examsTable.result, "FAILED"))).orderBy(desc(examsTable.createdAt)).limit(1);
-    const earliest = latestFailed ? addDays(latestFailed.createdAt, 10) : null;
+    const earliest = latestFailed ? addDays(latestFailed.examDate, EXAM_REBOOK_WAIT_DAYS) : null;
     if (earliest && dateOnly(appointmentDate) < earliest) {
       res.status(409).json({ message: `Theory exam can be rebooked from ${earliest.toISOString().slice(0, 10)}` }); return;
     }
@@ -102,9 +104,19 @@ router.post("/appointments", requireAuth, async (req, res) => {
   if (appointmentType === "PRACTICAL_EXAM" && app.status !== "THEORY_PASSED" && app.status !== "PRACTICAL_FAILED" && app.currentStep !== "PRACTICAL_BOOKING") {
     res.status(409).json({ message: "Application is not ready for practical exam booking" }); return;
   }
+  if (appointmentType === "PRACTICAL_EXAM" && app.status !== "PRACTICAL_FAILED") {
+    const [latestPassedTheory] = await db.select().from(examsTable).where(and(eq(examsTable.applicationId, applicationId), eq(examsTable.examType, "THEORY"), eq(examsTable.result, "PASSED"))).orderBy(desc(examsTable.examDate)).limit(1);
+    const earliest = latestPassedTheory ? addDays(latestPassedTheory.examDate, PRACTICAL_AFTER_THEORY_WAIT_DAYS) : null;
+    if (!earliest) {
+      res.status(409).json({ message: "A passed theory exam is required before booking the practical exam" }); return;
+    }
+    if (dateOnly(appointmentDate) < earliest) {
+      res.status(409).json({ message: `Practical exam can be booked from ${earliest.toISOString().slice(0, 10)}` }); return;
+    }
+  }
   if (appointmentType === "PRACTICAL_EXAM" && app.status === "PRACTICAL_FAILED") {
     const [latestFailed] = await db.select().from(examsTable).where(and(eq(examsTable.applicationId, applicationId), eq(examsTable.examType, "PRACTICAL"), eq(examsTable.result, "FAILED"))).orderBy(desc(examsTable.createdAt)).limit(1);
-    const earliest = latestFailed ? addDays(latestFailed.createdAt, 10) : null;
+    const earliest = latestFailed ? addDays(latestFailed.examDate, EXAM_REBOOK_WAIT_DAYS) : null;
     if (earliest && dateOnly(appointmentDate) < earliest) {
       res.status(409).json({ message: `Practical exam can be rebooked from ${earliest.toISOString().slice(0, 10)}` }); return;
     }

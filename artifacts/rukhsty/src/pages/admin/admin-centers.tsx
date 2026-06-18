@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
 import { Building2, Plus, MapPin } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedGovernorate, localizedLabel } from "@/lib/locale-labels";
 
 const GOVERNORATES = ["Amman","Irbid","Zarqa","Balqa","Madaba","Karak","Tafileh","Ma'an","Aqaba","Jerash","Ajloun","Mafraq"];
 const CENTER_TYPES = ["TRAINING","MEDICAL","THEORY_EXAM","PRACTICAL_EXAM","DVLD"];
@@ -25,6 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function AdminCenters() {
+  const { language, isRTL, pick } = useLanguage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,23 +39,23 @@ export default function AdminCenters() {
     try {
       await createMutation.mutateAsync({ data: values });
       queryClient.invalidateQueries({ queryKey: getListAdminCentersQueryKey() });
-      toast({ title: "Center created" });
+      toast({ title: pick("Center created", "تم إنشاء المركز") });
       setDialogOpen(false);
       form.reset();
     } catch {
-      toast({ variant: "destructive", title: "Failed to create center" });
+      toast({ variant: "destructive", title: pick("Failed to create center", "فشل إنشاء المركز") });
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Centers</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage training, medical, and exam centers</p>
+          <h1 className="text-2xl font-bold">{pick("Centers", "المراكز")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{pick("Manage training, medical, and exam centers", "إدارة مراكز التدريب والمراكز الطبية ومراكز الامتحانات")}</p>
         </div>
         <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)} data-testid="btn-add-center">
-          <Plus className="w-4 h-4" /> Add Center
+          <Plus className="w-4 h-4" /> {pick("Add Center", "إضافة مركز")}
         </Button>
       </motion.div>
 
@@ -69,14 +72,13 @@ export default function AdminCenters() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm">{center.nameEn}</p>
-                      <Badge className={`text-xs ${TYPE_COLORS[center.centerType] ?? "bg-slate-100 text-slate-700"}`}>{center.centerType?.replace(/_/g, " ")}</Badge>
-                      {!center.isActive && <Badge className="text-xs bg-red-100 text-red-700">Inactive</Badge>}
+                      <p className="font-medium text-sm">{language === "ar" ? center.nameAr : center.nameEn}</p>
+                      <Badge className={`text-xs ${TYPE_COLORS[center.centerType] ?? "bg-slate-100 text-slate-700"}`}>{localizedLabel(center.centerType, language)}</Badge>
+                      {!center.isActive && <Badge className="text-xs bg-red-100 text-red-700">{pick("Inactive", "غير نشط")}</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground" dir="rtl">{center.nameAr}</p>
                     <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                       <MapPin className="w-3 h-3" />
-                      {center.governorate}{center.city ? `, ${center.city}` : ""}{center.address ? ` · ${center.address}` : ""}
+                      {localizedGovernorate(center.governorate, language)}{center.city ? `, ${center.city}` : ""}{center.address ? ` · ${center.address}` : ""}
                     </div>
                   </div>
                 </div>
@@ -88,52 +90,52 @@ export default function AdminCenters() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add New Center</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{pick("Add New Center", "إضافة مركز جديد")}</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField control={form.control} name="centerType" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Center Type</FormLabel>
+                  <FormLabel>{pick("Center Type", "نوع المركز")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
-                    <SelectContent>{CENTER_TYPES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ")}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder={pick("Select type", "اختر النوع")} /></SelectTrigger></FormControl>
+                    <SelectContent>{CENTER_TYPES.map((t) => <SelectItem key={t} value={t}>{localizedLabel(t, language)}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )} />
               <div className="grid grid-cols-2 gap-3">
                 <FormField control={form.control} name="nameAr" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs">Name (Arabic)</FormLabel><FormControl><Input dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel className="text-xs">{pick("Arabic name", "الاسم بالعربية")}</FormLabel><FormControl><Input dir="rtl" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="nameEn" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs">Name (English)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel className="text-xs">{pick("English name", "الاسم بالإنجليزية")}</FormLabel><FormControl><Input dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
               <FormField control={form.control} name="governorate" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Governorate</FormLabel>
+                  <FormLabel>{pick("Governorate", "المحافظة")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
-                    <SelectContent>{GOVERNORATES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder={pick("Select", "اختر")} /></SelectTrigger></FormControl>
+                    <SelectContent>{GOVERNORATES.map((g) => <SelectItem key={g} value={g}>{localizedGovernorate(g, language)}</SelectItem>)}</SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )} />
               <div className="grid grid-cols-2 gap-3">
                 <FormField control={form.control} name="city" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs">City</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-xs">{pick("City", "المدينة")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                 )} />
                 <FormField control={form.control} name="phone" render={({ field }) => (
-                  <FormItem><FormLabel className="text-xs">Phone</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="text-xs">{pick("Phone", "الهاتف")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                 )} />
               </div>
               <FormField control={form.control} name="address" render={({ field }) => (
-                <FormItem><FormLabel>Address</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                <FormItem><FormLabel>{pick("Address", "العنوان")}</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
               )} />
               <div className="flex gap-3 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setDialogOpen(false)}>{pick("Cancel", "إلغاء")}</Button>
                 <Button type="submit" className="flex-1" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create Center"}
+                  {createMutation.isPending ? pick("Creating...", "جارٍ الإنشاء...") : pick("Create Center", "إنشاء المركز")}
                 </Button>
               </div>
             </form>

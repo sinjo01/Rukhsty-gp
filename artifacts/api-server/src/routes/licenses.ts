@@ -214,6 +214,10 @@ router.post("/licenses/:id/delivery/aramex", requireAuth, async (req, res) => {
   }
 
   const isPaid = (license?.paymentStatus ?? application?.paymentStatus) === "paid";
+  if (!isPaid) {
+    res.status(409).json({ message: "License fees must be paid before delivery can be requested." });
+    return;
+  }
   const aramexTrackingNumber = isPaid ? license?.aramexTrackingNumber ?? application?.aramexTrackingNumber ?? generateAramexTrackingNumber() : license?.aramexTrackingNumber ?? application?.aramexTrackingNumber ?? null;
   const deliveryStatus = isPaid ? "payment_confirmed" : "pending_payment";
 

@@ -14,6 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedGovernorate } from "@/lib/locale-labels";
 
 const GOVERNORATES = ["Amman","Irbid","Zarqa","Balqa","Madaba","Karak","Tafileh","Ma'an","Aqaba","Jerash","Ajloun","Mafraq"];
 
@@ -37,6 +39,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function Profile() {
+  const { language, isRTL, pick } = useLanguage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: profile, isLoading } = useGetProfile({ query: { queryKey: getGetProfileQueryKey() } });
@@ -66,9 +69,9 @@ export default function Profile() {
     try {
       await updateMutation.mutateAsync({ data: { ...values, age: Number(values.age) } as any });
       queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() });
-      toast({ title: "Profile updated successfully" });
+      toast({ title: pick("Profile updated successfully", "تم تحديث الملف الشخصي بنجاح") });
     } catch {
-      toast({ variant: "destructive", title: "Failed to update profile" });
+      toast({ variant: "destructive", title: pick("Failed to update profile", "فشل تحديث الملف الشخصي") });
     }
   };
 
@@ -77,15 +80,15 @@ export default function Profile() {
   const isComplete = profile?.profileStatus === "COMPLETE";
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">My Profile</h1>
-            <p className="text-muted-foreground text-sm mt-1">Manage your personal information and documents</p>
+            <h1 className="text-2xl font-bold">{pick("My Profile", "ملفي الشخصي")}</h1>
+            <p className="text-muted-foreground text-sm mt-1">{pick("Manage your personal information and documents", "إدارة معلوماتك الشخصية ومستنداتك")}</p>
           </div>
           <Badge className={isComplete ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"}>
-            {isComplete ? <><CheckCircle className="w-3 h-3 mr-1" />Complete</> : <><AlertCircle className="w-3 h-3 mr-1" />Incomplete</>}
+            {isComplete ? <><CheckCircle className="w-3 h-3 me-1" />{pick("Complete", "مكتمل")}</> : <><AlertCircle className="w-3 h-3 me-1" />{pick("Incomplete", "غير مكتمل")}</>}
           </Badge>
         </div>
       </motion.div>
@@ -102,7 +105,7 @@ export default function Profile() {
             </Avatar>
             <div>
               <p className="font-semibold text-lg">{profile?.firstName} {profile?.familyName}</p>
-              <p className="text-muted-foreground text-sm">National ID: {profile?.nationalId}</p>
+              <p className="text-muted-foreground text-sm">{pick("National ID", "الرقم الوطني")}: {profile?.nationalId}</p>
               <p className="text-muted-foreground text-sm">{profile?.phone}</p>
             </div>
           </div>
@@ -111,8 +114,8 @@ export default function Profile() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your profile details</CardDescription>
+          <CardTitle>{pick("Personal Information", "المعلومات الشخصية")}</CardTitle>
+          <CardDescription>{pick("Update your profile details", "حدّث بيانات ملفك الشخصي")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -121,7 +124,12 @@ export default function Profile() {
                 {(["firstName","secondName","thirdName","familyName"] as const).map((f) => (
                   <FormField key={f} control={form.control} name={f} render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="capitalize text-xs">{f.replace(/([A-Z])/g, " $1").trim()}</FormLabel>
+                      <FormLabel className="text-xs">{({
+                        firstName: pick("First name", "الاسم الأول"),
+                        secondName: pick("Second name", "الاسم الثاني"),
+                        thirdName: pick("Third name", "الاسم الثالث"),
+                        familyName: pick("Family name", "اسم العائلة"),
+                      } as const)[f]}</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -132,14 +140,14 @@ export default function Profile() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="age" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Age</FormLabel>
+                    <FormLabel className="text-xs">{pick("Age", "العمر")}</FormLabel>
                     <FormControl><Input type="number" min="18" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="nationalId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">National ID</FormLabel>
+                    <FormLabel className="text-xs">{pick("National ID", "الرقم الوطني")}</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -148,22 +156,22 @@ export default function Profile() {
 
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone</FormLabel>
+                  <FormLabel>{pick("Phone", "رقم الهاتف")}</FormLabel>
                   <FormControl><Input type="tel" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
 
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Location</h3>
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">{pick("Location", "العنوان")}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="governorate" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Governorate</FormLabel>
+                      <FormLabel className="text-xs">{pick("Governorate", "المحافظة")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder={pick("Select", "اختر")} /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {GOVERNORATES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                          {GOVERNORATES.map((g) => <SelectItem key={g} value={g}>{localizedGovernorate(g, language)}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -171,21 +179,21 @@ export default function Profile() {
                   )} />
                   <FormField control={form.control} name="city" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">City</FormLabel>
+                      <FormLabel className="text-xs">{pick("City", "المدينة")}</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="area" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Area</FormLabel>
+                      <FormLabel className="text-xs">{pick("Area", "المنطقة")}</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="address" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Address</FormLabel>
+                      <FormLabel className="text-xs">{pick("Address", "العنوان")}</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -194,11 +202,11 @@ export default function Profile() {
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Documents</h3>
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">{pick("Documents", "المستندات")}</h3>
                 <div className="space-y-3">
                   <FormField control={form.control} name="personalPhotoUrl" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Personal Photo URL</FormLabel>
+                      <FormLabel className="text-xs">{pick("Personal Photo URL", "رابط الصورة الشخصية")}</FormLabel>
                       <FormControl><Input type="url" placeholder="https://..." {...field} /></FormControl>
                       {field.value && <img src={field.value} alt="preview" className="w-20 h-14 object-cover rounded border mt-1" onError={(e) => (e.currentTarget.style.display = "none")} />}
                       <FormMessage />
@@ -208,7 +216,7 @@ export default function Profile() {
               </div>
 
               <Button type="submit" disabled={updateMutation.isPending} className="w-full sm:w-auto">
-                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                {updateMutation.isPending ? pick("Saving...", "جارٍ الحفظ...") : pick("Save Changes", "حفظ التغييرات")}
               </Button>
             </form>
           </Form>

@@ -52,17 +52,23 @@ export default function LicenseSuccess({ params }: { params?: { id?: string } })
   });
   const displayLicense = (appLicense as any)?.license ?? license;
   const detail = app as any;
+  const isPaid = (displayLicense as any)?.paymentStatus === "paid";
 
   if (isLoading || appLoading || appLicenseLoading) {
     return <div className="space-y-4"><Skeleton className="h-12 w-72" /><Skeleton className="h-96 rounded-2xl" /></div>;
   }
 
-  if (!displayLicense || (applicationId && detail?.status !== "LICENSE_ISSUED" && !(appLicense as any)?.license)) {
+  if (!displayLicense || !isPaid || (applicationId && detail?.status !== "LICENSE_ISSUED" && !(appLicense as any)?.license)) {
     return (
       <div className="mx-auto max-w-xl py-20 text-center" dir={isRTL ? "rtl" : "ltr"}>
         <WalletCards className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h1 className="mt-4 text-2xl font-bold">{language === "ar" ? "لا توجد رخصة بعد" : "No License Yet"}</h1>
-        <Link href="/dashboard"><Button className="mt-6">{language === "ar" ? "العودة للوحة الرئيسية" : "Back to Dashboard"}</Button></Link>
+        <h1 className="mt-4 text-2xl font-bold">{displayLicense && !isPaid ? (language === "ar" ? "أكمل الدفع أولاً" : "Complete Payment First") : (language === "ar" ? "لا توجد رخصة بعد" : "No License Yet")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {displayLicense && !isPaid
+            ? (language === "ar" ? "ستظهر صفحة التهنئة والرخصة الرقمية بعد إتمام الدفع." : "The congratulations page and digital license will appear after payment.")
+            : ""}
+        </p>
+        <Link href={displayLicense && !isPaid ? "/my-license" : "/dashboard"}><Button className="mt-6">{displayLicense && !isPaid ? (language === "ar" ? "الانتقال إلى الدفع" : "Go to Payment") : (language === "ar" ? "العودة للوحة الرئيسية" : "Back to Dashboard")}</Button></Link>
       </div>
     );
   }

@@ -62,7 +62,6 @@ export default function OfficerResults() {
   const selected = applications.find((app) => app.id === selectedId) ?? applications[0];
 
   const [medicalResult, setMedicalResult] = useState("");
-  const [theoryResult, setTheoryResult] = useState("");
   const [score, setScore] = useState("");
   const [notes, setNotes] = useState("");
   const [checked, setChecked] = useState<Record<number, boolean>>({});
@@ -97,7 +96,8 @@ export default function OfficerResults() {
   };
 
   const submitTheory = async () => {
-    if (!selected || !theoryResult) return;
+    if (!selected || score === "") return;
+    const theoryResult = Number(score) >= 70 ? "PASSED" : "FAILED";
     await apiFetch("/api/officer/exams/record", {
       method: "POST",
       body: JSON.stringify({
@@ -206,14 +206,23 @@ export default function OfficerResults() {
               <Card>
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="w-4 h-4 text-blue-500" />{language === "ar" ? "نتيجة الامتحان النظري" : "Theory exam result"}</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <Select value={theoryResult} onValueChange={setTheoryResult}>
-                    <SelectTrigger><SelectValue placeholder={language === "ar" ? "اختر النتيجة" : "Select result"} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PASSED">{language === "ar" ? "ناجح" : "Passed"}</SelectItem>
-                      <SelectItem value="FAILED">{language === "ar" ? "راسب" : "Failed"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input type="number" value={score} onChange={(e) => setScore(e.target.value)} placeholder={language === "ar" ? "العلامة" : "Score"} />
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "PASSED", label: language === "ar" ? "ناجح" : "Passed" },
+                      { value: "FAILED", label: language === "ar" ? "راسب" : "Failed" },
+                    ].map((option) => {
+                      const result = score === "" ? "" : Number(score) >= 70 ? "PASSED" : "FAILED";
+                      return (
+                        <div key={option.value} className={`rounded-xl border p-3 text-sm ${result === option.value ? "border-emerald-600 bg-emerald-50 font-medium" : "opacity-60"}`}>
+                          {option.label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <Input type="number" min={0} max={100} value={score} onChange={(e) => setScore(e.target.value)} placeholder={language === "ar" ? "العلامة" : "Score"} />
+                  <p className="text-xs text-muted-foreground">
+                    {language === "ar" ? "يحدد النظام النتيجة تلقائياً: 70 فأكثر ناجح." : "The system determines the result automatically: 70 or above is Passed."}
+                  </p>
                   <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={language === "ar" ? "ملاحظات" : "Notes"} />
                   <Button onClick={submitTheory}>{language === "ar" ? "تسجيل النتيجة" : "Record result"}</Button>
                 </CardContent>

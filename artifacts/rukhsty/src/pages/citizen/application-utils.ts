@@ -56,6 +56,41 @@ export function isPracticalBookingRequired(app: any) {
   return app?.currentStep === "PRACTICAL_BOOKING" || app?.status === "THEORY_PASSED" || app?.status === "PRACTICAL_BOOKING" || app?.status === "PRACTICAL_FAILED";
 }
 
+export function examRebookingInfo(app: any) {
+  if (app?.rebookingEligibility?.earliestDate) return app.rebookingEligibility;
+  const examType = app?.status === "THEORY_FAILED" ? "THEORY" : app?.status === "PRACTICAL_FAILED" ? "PRACTICAL" : null;
+  if (!examType) return null;
+  const failedExam = [...(app?.exams ?? [])]
+    .filter((exam: any) => exam.examType === examType && exam.result === "FAILED")
+    .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+  if (!failedExam) return null;
+  const earliest = new Date(failedExam.examDate ?? failedExam.createdAt);
+  earliest.setUTCHours(0, 0, 0, 0);
+  earliest.setUTCDate(earliest.getUTCDate() + 14);
+  return {
+    examType,
+    failedAt: failedExam.examDate ?? failedExam.createdAt,
+    earliestDate: earliest.toISOString().slice(0, 10),
+    waitDays: 14,
+  };
+}
+
+export function practicalBookingInfo(app: any) {
+  if (app?.practicalBookingEligibility?.earliestDate) return app.practicalBookingEligibility;
+  const passedTheory = [...(app?.exams ?? [])]
+    .filter((exam: any) => exam.examType === "THEORY" && exam.result === "PASSED")
+    .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+  if (!passedTheory) return null;
+  const earliest = new Date(passedTheory.examDate ?? passedTheory.createdAt);
+  earliest.setUTCHours(0, 0, 0, 0);
+  earliest.setUTCDate(earliest.getUTCDate() + 7);
+  return {
+    theoryPassedAt: passedTheory.examDate ?? passedTheory.createdAt,
+    earliestDate: earliest.toISOString().slice(0, 10),
+    waitDays: 7,
+  };
+}
+
 export function statusLabel(status?: string, language: "en" | "ar" = "en") {
   const en: Record<string, string> = {
     SECURITY_APPROVED: "Security Approved",

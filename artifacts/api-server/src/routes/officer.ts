@@ -423,12 +423,16 @@ async function recordExam(req: Request, res: Response) {
       failedPracticalItems = "";
     }
   }
+  const failedExamDate = new Date(exam.examDate);
+  failedExamDate.setUTCHours(0, 0, 0, 0);
+  failedExamDate.setUTCDate(failedExamDate.getUTCDate() + 14);
+  const earliestRebookingDate = failedExamDate.toISOString().slice(0, 10);
   const theoryMessage = passed
     ? "You passed the theory exam. You can now book your practical exam. لقد نجحت في الامتحان النظري. يمكنك الآن حجز موعد الامتحان العملي."
-    : "You did not pass the theory exam. You can book another appointment after 10 days. لم تجتز الامتحان النظري. يمكنك حجز موعد جديد بعد 10 أيام.";
+    : `You did not pass the theory exam. You can choose another appointment on or after ${earliestRebookingDate}. لم تجتز الامتحان النظري. يمكنك اختيار موعد جديد بتاريخ ${earliestRebookingDate} أو بعده.`;
   const practicalMessage = passed
     ? "Congratulations, you passed the practical exam. Your license is ready for issuance. مبارك، لقد نجحت في الامتحان العملي. رخصتك جاهزة للإصدار."
-    : `You did not pass the practical exam. Failed items: ${failedPracticalItems || "See examiner notes"}. لم تجتز الامتحان العملي. أسباب الرسوب: ${failedPracticalItems || "يرجى مراجعة ملاحظات الفاحص"}`;
+    : `You did not pass the practical exam. You can choose another appointment on or after ${earliestRebookingDate}. Failed items: ${failedPracticalItems || "See examiner notes"}. لم تجتز الامتحان العملي. يمكنك اختيار موعد جديد بتاريخ ${earliestRebookingDate} أو بعده. أسباب الرسوب: ${failedPracticalItems || "يرجى مراجعة ملاحظات الفاحص"}`;
   await db.insert(notificationsTable).values({
     userId: app.userId,
     title: examType === "THEORY" ? (passed ? "Theory exam passed" : "Theory exam failed") : (passed ? "Practical exam passed" : "Practical exam failed"),

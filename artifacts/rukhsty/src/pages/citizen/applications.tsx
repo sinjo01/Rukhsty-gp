@@ -41,7 +41,7 @@ export default function Applications() {
           <h3 className="font-semibold text-lg">{language === "ar" ? "لا توجد طلبات بعد" : "No applications yet"}</h3>
           <p className="text-muted-foreground text-sm mt-1 mb-6">{language === "ar" ? "ابدأ بتقديم طلب رخصة قيادة جديدة" : "Start by applying for a new driving license"}</p>
           <Link href="/services/issue-driving-license">
-            <Button>Start New Application</Button>
+            <Button>{language === "ar" ? "بدء طلب جديد" : "Start New Application"}</Button>
           </Link>
         </motion.div>
       )}
@@ -59,7 +59,7 @@ export default function Applications() {
                     <div>
                       <p className="font-mono text-sm font-semibold">{app.applicationNumber}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {app.service?.nameEn ?? "Driving License"} {app.licenseCategory?.code ? `· ${app.licenseCategory.code}` : ""}
+                        {(language === "ar" ? app.service?.nameAr : app.service?.nameEn) ?? (language === "ar" ? "رخصة قيادة" : "Driving License")} {app.licenseCategory?.code ? `· ${app.licenseCategory.code}` : ""}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge className={`text-xs ${STATUS_COLORS[app.status] ?? "bg-slate-100 text-slate-700"}`}>

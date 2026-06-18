@@ -77,7 +77,7 @@ export default function LicenseCard() {
           <h1 className="text-2xl font-bold">{language === "ar" ? "رخصة القيادة الرقمية" : "Digital Driving License"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{language === "ar" ? "بطاقة رسمية رقمية بتصميم آمن وجاهزة للعرض." : "A secure, official-style digital card ready for display."}</p>
         </div>
-        {displayLicense && (
+        {displayLicense && isPaid && (
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" className="gap-2" onClick={() => downloadLicense(displayLicense as any, language)}><Download className="h-4 w-4" />{language === "ar" ? "تنزيل الرخصة" : "Download License"}</Button>
             <Button variant="outline" className="gap-2" onClick={() => window.print()}><Printer className="h-4 w-4" />{language === "ar" ? "طباعة الرخصة" : "Print License"}</Button>
@@ -98,26 +98,29 @@ export default function LicenseCard() {
             <Button className="mt-6">{language === "ar" ? "ابدأ طلباً جديداً" : "Start Application"}</Button>
           </Link>
         </motion.div>
+      ) : !isPaid ? (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-6 text-center">
+              <CreditCard className="mx-auto h-12 w-12 text-amber-700" />
+              <h2 className="mt-4 text-xl font-bold text-emerald-950">{language === "ar" ? "الدفع مطلوب قبل عرض الرخصة" : "Payment Required Before Viewing License"}</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-slate-600">
+                {language === "ar" ? "بعد إتمام الدفع ستظهر الرخصة الرقمية ورمز التحقق وخيارات التنزيل والطباعة." : "After payment, your digital license, verification QR, download, and print options will become available."}
+              </p>
+              <p className="mt-4 text-sm text-slate-600">
+                {language === "ar" ? "المرجع" : "Reference"}: <span className="font-mono">{(displayLicense as any).paymentReference ?? preview}</span> · 3.00 JOD
+              </p>
+              <Button onClick={handlePayment} disabled={paymentLoading} className="mt-5 bg-emerald-700 hover:bg-emerald-800">
+                {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       ) : (
         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.08 }}>
           <Card className="overflow-hidden border-emerald-200 bg-white shadow-sm">
             <CardContent className="p-4 sm:p-8">
               <DigitalLicenseCard license={displayLicense} />
-              {!isPaid && (
-                <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-semibold text-emerald-950">{language === "ar" ? "ادفع رسوم الرخصة عبر إي فواتيركم" : "Pay License Fees via eFAWATEERcom"}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {language === "ar" ? "المرجع" : "Reference"}: <span className="font-mono">{(displayLicense as any).paymentReference ?? preview}</span> · 3.00 JOD
-                      </p>
-                    </div>
-                    <Button onClick={handlePayment} disabled={paymentLoading} className="bg-emerald-700 hover:bg-emerald-800">
-                      {paymentLoading ? (language === "ar" ? "جارٍ الدفع..." : "Paying...") : (language === "ar" ? "ادفع عبر إي فواتيركم" : "Pay by eFAWATEERcom")}
-                    </Button>
-                  </div>
-                </div>
-              )}
               <div className="mt-6 flex justify-center">
                 <Link href="/dashboard">
                   <Button variant="outline" className="gap-2"><Home className="h-4 w-4" />{language === "ar" ? "العودة للوحة الرئيسية" : "Back to Dashboard"}</Button>

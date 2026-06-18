@@ -21,12 +21,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLogout, useListNotifications } from "@workspace/api-client-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { localizedLabel } from "@/lib/locale-labels";
 
 export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { children: ReactNode, requireAuth?: boolean, allowedRoles?: string[] }) {
   const { user, isLoading, isAuthenticated, logout: contextLogout } = useAuth();
   const [location, setLocation] = useLocation();
   const logoutMutation = useLogout();
-  const { isRTL, t, toggleLanguage } = useLanguage();
+  const { language, isRTL, t, toggleLanguage } = useLanguage();
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">{t("loading")}</div>;
@@ -167,7 +168,7 @@ export function AppShell({ children, requireAuth = true, allowedRoles = [] }: { 
             <div className="flex items-center gap-3">
               <div className={cn("hidden sm:block", isRTL ? "text-left" : "text-right")}>
                 <p className="text-sm font-semibold leading-none">{user?.profile?.firstName || user?.email}</p>
-                <p className="text-xs text-muted-foreground mt-1 capitalize">{user?.role?.toLowerCase().replace(/_/g, " ")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{localizedLabel(user?.role, language)}</p>
               </div>
               <div className="rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shadow-sm">
                 <Avatar className="w-9 h-9 border-2 border-card">

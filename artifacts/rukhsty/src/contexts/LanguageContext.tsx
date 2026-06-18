@@ -7,6 +7,7 @@ type LanguageContextValue = {
   toggleLanguage: () => void;
   isRTL: boolean;
   t: (key: TranslationKey) => string;
+  pick: (english: string, arabic: string) => string;
 };
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
@@ -43,6 +44,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       toggleLanguage,
       isRTL: language === "ar",
       t: (key) => translate(key, language),
+      pick: (english, arabic) => (language === "ar" ? arabic : english),
     }),
     [language, setLanguage, toggleLanguage],
   );

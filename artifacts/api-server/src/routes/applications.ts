@@ -14,6 +14,8 @@ import { getLicenseWithCategory } from "../services/license-issuance";
 
 const router = Router();
 const TRAINING_CERTIFICATE_DOCUMENT_TYPE = "TRAINING_CERTIFICATE";
+const EXAM_REBOOK_WAIT_DAYS = 14;
+const PRACTICAL_AFTER_THEORY_WAIT_DAYS = 7;
 
 const APPLICATION_STEPS = [
   { stepKey: "APPLICATION_SUBMITTED", stepNameAr: "تقديم الطلب", stepNameEn: "Application submitted", orderNumber: 1 },
@@ -64,6 +66,20 @@ function deriveStepStatus(stepKey: string, activeStep: string, appStatus: string
   if (order < activeOrder) return "COMPLETED";
   if (order === activeOrder) return "ACTIVE";
   return "PENDING";
+}
+
+function examRebookingDate(examDate: Date) {
+  const date = new Date(examDate);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + EXAM_REBOOK_WAIT_DAYS);
+  return date.toISOString().slice(0, 10);
+}
+
+function addCalendarDays(dateValue: Date, days: number) {
+  const date = new Date(dateValue);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 async function syncApplicationSteps(applicationId: string, appStatus: string, currentStep: string) {
@@ -122,9 +138,29 @@ async function getApplicationDetail(appId: string, userId: string | null) {
     trainingWithCenter = { ...trainingRecord, center: center ?? null };
   }
   const [medicalTest] = await db.select().from(medicalTestsTable).where(eq(medicalTestsTable.applicationId, appId)).limit(1);
-  const exams = await db.select().from(examsTable).where(eq(examsTable.applicationId, appId));
+  const exams = await db.select().from(examsTable).where(eq(examsTable.applicationId, appId)).orderBy(desc(examsTable.examDate));
+  const failedExamType = app.status === "THEORY_FAILED" ? "THEORY" : app.status === "PRACTICAL_FAILED" ? "PRACTICAL" : null;
+  const latestFailedExam = failedExamType
+    ? exams.find((exam) => exam.examType === failedExamType && exam.result === "FAILED")
+    : null;
+  const rebookingEligibility = latestFailedExam
+    ? {
+        examType: failedExamType,
+        failedAt: latestFailedExam.examDate.toISOString(),
+        earliestDate: examRebookingDate(latestFailedExam.examDate),
+        waitDays: EXAM_REBOOK_WAIT_DAYS,
+      }
+    : null;
+  const latestPassedTheory = exams.find((exam) => exam.examType === "THEORY" && exam.result === "PASSED");
+  const practicalBookingEligibility = latestPassedTheory
+    ? {
+        theoryPassedAt: latestPassedTheory.examDate.toISOString(),
+        earliestDate: addCalendarDays(latestPassedTheory.examDate, PRACTICAL_AFTER_THEORY_WAIT_DAYS),
+        waitDays: PRACTICAL_AFTER_THEORY_WAIT_DAYS,
+      }
+    : null;
   const [license] = await db.select().from(drivingLicensesTable).where(eq(drivingLicensesTable.applicationId, app.id)).limit(1);
-  return { ...app, service: service ?? null, licenseCategory: licenseCategory ?? null, user: user ?? null, profile: profile ?? null, steps, documents: docs, appointments: appointmentsWithCenter, trainingRecord: trainingWithCenter, medicalTest: medicalTest ?? null, exams, license: await getLicenseWithCategory(license ?? null) };
+  return { ...app, service: service ?? null, licenseCategory: licenseCategory ?? null, user: user ?? null, profile: profile ?? null, steps, documents: docs, appointments: appointmentsWithCenter, trainingRecord: trainingWithCenter, medicalTest: medicalTest ?? null, exams, rebookingEligibility, practicalBookingEligibility, license: await getLicenseWithCategory(license ?? null) };
 }
 
 router.get("/applications", requireAuth, async (req, res) => {

@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { Users, User } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedLabel } from "@/lib/locale-labels";
 
 const ROLE_COLORS: Record<string, string> = {
   USER: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -16,14 +18,15 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function AdminUsers() {
+  const { language, isRTL, pick } = useLanguage();
   const { data, isLoading } = useListAdminUsers({} as any, { query: { queryKey: getListAdminUsersQueryKey({} as any) } });
   const users = (data as any)?.data ?? data ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-muted-foreground text-sm mt-1">All registered platform users</p>
+        <h1 className="text-2xl font-bold">{pick("Users", "المستخدمون")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{pick("All registered platform users", "جميع مستخدمي المنصة المسجلين")}</p>
       </motion.div>
 
       {isLoading && <div className="space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-16" />)}</div>}
@@ -45,16 +48,16 @@ export default function AdminUsers() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge className={`text-xs ${ROLE_COLORS[user.role] ?? "bg-slate-100 text-slate-700"}`}>
-                      {user.role?.replace(/_/g, " ")}
+                      {localizedLabel(user.role, language)}
                     </Badge>
-                    {!user.isActive && <Badge className="text-xs bg-red-100 text-red-700">Inactive</Badge>}
+                    {!user.isActive && <Badge className="text-xs bg-red-100 text-red-700">{pick("Inactive", "غير نشط")}</Badge>}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         ))}
-        {!isLoading && users.length === 0 && <div className="text-center py-16 text-muted-foreground">No users found</div>}
+        {!isLoading && users.length === 0 && <div className="text-center py-16 text-muted-foreground">{pick("No users found", "لا يوجد مستخدمون")}</div>}
       </div>
     </div>
   );

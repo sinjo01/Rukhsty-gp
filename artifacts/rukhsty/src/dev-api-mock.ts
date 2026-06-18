@@ -849,9 +849,18 @@ function validateBooking(app: any, appointmentType: string, appointmentDate: str
   if (existing) return "An active appointment already exists for this stage";
   const failed = latestFailedExam(app.id, appointmentType === "THEORY_EXAM" ? "THEORY" : appointmentType === "PRACTICAL_EXAM" ? "PRACTICAL" : "");
   if (failed && ["THEORY_EXAM", "PRACTICAL_EXAM"].includes(appointmentType)) {
-    const earliest = new Date(failed.createdAt);
-    earliest.setDate(earliest.getDate() + 10);
+    const earliest = new Date(failed.examDate ?? failed.createdAt);
+    earliest.setDate(earliest.getDate() + 14);
     if (new Date(`${appointmentDate}T00:00:00`) < earliest) return `${appointmentType === "THEORY_EXAM" ? "Theory" : "Practical"} exam can be rebooked from ${earliest.toISOString().slice(0, 10)}`;
+  }
+  if (appointmentType === "PRACTICAL_EXAM" && app.status !== "PRACTICAL_FAILED") {
+    const passedTheory = [...exams]
+      .filter((exam: any) => exam.applicationId === app.id && exam.examType === "THEORY" && exam.result === "PASSED")
+      .sort((a: any, b: any) => new Date(b.examDate ?? b.createdAt).getTime() - new Date(a.examDate ?? a.createdAt).getTime())[0];
+    if (!passedTheory) return "A passed theory exam is required before booking the practical exam";
+    const earliest = new Date(passedTheory.examDate ?? passedTheory.createdAt);
+    earliest.setDate(earliest.getDate() + 7);
+    if (new Date(`${appointmentDate}T00:00:00`) < earliest) return `Practical exam can be booked from ${earliest.toISOString().slice(0, 10)}`;
   }
   return "";
 }
@@ -913,7 +922,7 @@ function recordExamMock(body: Record<string, unknown>, officer: DemoUser) {
   const examType = asString(body.examType);
   const score = Number(body.score ?? 0);
   const result = score >= 70 ? "PASSED" : "FAILED";
-  const exam = { id: `exam-${Date.now()}`, applicationId: app.id, officerId: officer.id, examType, score: String(score), maxScore: "100", result, notes: asString(body.notes), createdAt: new Date().toISOString() };
+  const exam = { id: `exam-${Date.now()}`, applicationId: app.id, officerId: officer.id, examType, score: String(score), maxScore: "100", result, notes: asString(body.notes), examDate: new Date().toISOString(), createdAt: new Date().toISOString() };
   exams.unshift(exam);
   completeAppointment(app.id, examType === "THEORY" ? "THEORY_EXAM" : "PRACTICAL_EXAM");
   if (examType === "THEORY") {
@@ -921,7 +930,7 @@ function recordExamMock(body: Record<string, unknown>, officer: DemoUser) {
     app.currentStep = result === "PASSED" ? "PRACTICAL_BOOKING" : "THEORY_BOOKING";
     addNotification(app.userId, result === "PASSED" ? "Theory exam passed" : "Theory exam failed", result === "PASSED"
       ? "لقد نجحت في الامتحان النظري. يرجى حجز موعد الامتحان العملي."
-      : "لم تجتز الامتحان النظري. يمكنك حجز موعد جديد بعد 10 أيام.", result === "PASSED" ? "SUCCESS" : "ERROR");
+      : "لم تجتز الامتحان النظري. يمكنك اختيار موعد جديد بعد 14 يوماً.", result === "PASSED" ? "SUCCESS" : "ERROR");
   } else {
     if (result === "PASSED") {
       app.status = "LICENSE_ISSUED";

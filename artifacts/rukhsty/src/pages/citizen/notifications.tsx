@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { Bell, CheckCheck, Info, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const TYPE_ICONS: Record<string, { icon: any; color: string }> = {
   INFO: { icon: Info, color: "text-blue-500 bg-blue-50 dark:bg-blue-950/30" },
@@ -16,6 +17,7 @@ const TYPE_ICONS: Record<string, { icon: any; color: string }> = {
 };
 
 export default function Notifications() {
+  const { isRTL, pick } = useLanguage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: notifications, isLoading } = useListNotifications({ query: { queryKey: getListNotificationsQueryKey() } });
@@ -30,21 +32,21 @@ export default function Notifications() {
   const handleMarkAll = async () => {
     await markAll.mutateAsync();
     queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
-    toast({ title: "All notifications marked as read" });
+    toast({ title: pick("All notifications marked as read", "تم تحديد جميع الإشعارات كمقروءة") });
   };
 
   const unreadCount = notifications?.filter((n: any) => !n.isRead).length ?? 0;
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-2xl mx-auto" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Notifications</h1>
-          <p className="text-muted-foreground text-sm mt-1">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</p>
+          <h1 className="text-2xl font-bold">{pick("Notifications", "الإشعارات")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{unreadCount > 0 ? pick(`${unreadCount} unread`, `${unreadCount} غير مقروء`) : pick("All caught up", "لا توجد إشعارات جديدة")}</p>
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" size="sm" className="gap-2" onClick={handleMarkAll} disabled={markAll.isPending} data-testid="btn-mark-all-read">
-            <CheckCheck className="w-4 h-4" /> Mark all read
+            <CheckCheck className="w-4 h-4" /> {pick("Mark all read", "تحديد الكل كمقروء")}
           </Button>
         )}
       </motion.div>
@@ -56,8 +58,8 @@ export default function Notifications() {
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
             <Bell className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h3 className="font-semibold">No notifications</h3>
-          <p className="text-muted-foreground text-sm mt-1">You'll see updates about your application here</p>
+          <h3 className="font-semibold">{pick("No notifications", "لا توجد إشعارات")}</h3>
+          <p className="text-muted-foreground text-sm mt-1">{pick("You'll see updates about your application here", "ستظهر تحديثات طلبك هنا")}</p>
         </div>
       )}
 

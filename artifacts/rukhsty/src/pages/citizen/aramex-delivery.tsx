@@ -52,9 +52,11 @@ export default function AramexDelivery({ params }: { params: { id: string } }) {
   const licenseId = params.id || selectedLicense?.id;
   const tracking = saved?.aramexTrackingNumber ?? selectedLicense?.aramexTrackingNumber;
   const deliveryStatus = saved?.deliveryStatus ?? selectedLicense?.deliveryStatus;
+  const isPaid = selectedLicense?.paymentStatus === "paid";
 
   const submit = async () => {
     setError("");
+    if (!isPaid) { setError(language === "ar" ? "يجب دفع رسوم الرخصة قبل طلب التوصيل." : "License fees must be paid before requesting delivery."); return; }
     if (deliveryAddress.trim().length < 10) { setError(language === "ar" ? "أدخل عنواناً واضحاً من 10 أحرف على الأقل." : "Enter a clear address with at least 10 characters."); return; }
     if (!deliveryCity.trim()) { setError(language === "ar" ? "المدينة مطلوبة." : "City is required."); return; }
     if (!validPhone(deliveryPhone)) { setError(language === "ar" ? "أدخل رقم هاتف أردني صحيح." : "Enter a valid Jordanian phone number."); return; }
@@ -97,6 +99,16 @@ export default function AramexDelivery({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      {!isPaid && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-5 text-center">
+            <h2 className="font-semibold text-emerald-950">{language === "ar" ? "الدفع مطلوب أولاً" : "Payment Required First"}</h2>
+            <p className="mt-2 text-sm text-slate-600">{language === "ar" ? "ادفع رسوم الرخصة قبل اختيار التوصيل عبر أرامكس." : "Pay the license fees before choosing Aramex delivery."}</p>
+            <Link href="/my-license"><Button className="mt-4 bg-emerald-700 hover:bg-emerald-800">{language === "ar" ? "الانتقال إلى الدفع" : "Go to Payment"}</Button></Link>
+          </CardContent>
+        </Card>
+      )}
+
       {saved && (
         <Card className="border-emerald-200 bg-emerald-50">
           <CardContent className="flex items-start gap-3 p-5">
@@ -112,7 +124,7 @@ export default function AramexDelivery({ params }: { params: { id: string } }) {
         </Card>
       )}
 
-      <Card className="border-emerald-100 shadow-sm">
+      {isPaid && <Card className="border-emerald-100 shadow-sm">
         <CardHeader className="border-b bg-emerald-50/70">
           <CardTitle className="flex items-center gap-2 text-emerald-950"><Truck className="h-5 w-5" />{language === "ar" ? "بيانات التوصيل" : "Delivery Details"}</CardTitle>
         </CardHeader>
@@ -140,7 +152,7 @@ export default function AramexDelivery({ params }: { params: { id: string } }) {
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       {selectedLicense && (
         <Card>

@@ -3,6 +3,7 @@ import { useListOfficerAppointments, getListOfficerAppointmentsQueryKey, useUpda
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedLabel } from "@/lib/locale-labels";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -104,8 +105,8 @@ export default function OfficerAppointments() {
   return (
     <div className="space-y-6" dir={isRTL ? "rtl" : "ltr"}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold">Center Appointments</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage and update appointment statuses</p>
+        <h1 className="text-2xl font-bold">{language === "ar" ? "مواعيد المركز" : "Center Appointments"}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{language === "ar" ? "إدارة المواعيد وتحديث حالاتها" : "Manage and update appointment statuses"}</p>
       </motion.div>
 
       {isLoading && <div className="space-y-3">{[1,2,3].map((i) => <Skeleton key={i} className="h-28" />)}</div>}
@@ -113,7 +114,7 @@ export default function OfficerAppointments() {
       {!isLoading && !appointments?.length && (
         <div className="text-center py-20">
           <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="font-semibold">No appointments for this center</h3>
+          <h3 className="font-semibold">{language === "ar" ? "لا توجد مواعيد لهذا المركز" : "No appointments for this center"}</h3>
         </div>
       )}
 
@@ -131,19 +132,19 @@ export default function OfficerAppointments() {
                       <User className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{apt.profile?.firstName ?? apt.user?.email ?? "Citizen"} {apt.profile?.familyName ?? ""}</p>
-                      <p className="text-xs text-muted-foreground">{apt.profile?.nationalId ? `National ID: ${apt.profile.nationalId}` : apt.user?.email ?? ""}</p>
-                      <p className="text-xs text-muted-foreground">Application: <span className="font-mono">{apt.application?.applicationNumber ?? apt.applicationId}</span></p>
+                      <p className="font-medium text-sm">{apt.profile?.firstName ?? apt.user?.email ?? (language === "ar" ? "مواطن" : "Citizen")} {apt.profile?.familyName ?? ""}</p>
+                      <p className="text-xs text-muted-foreground">{apt.profile?.nationalId ? `${language === "ar" ? "الرقم الوطني" : "National ID"}: ${apt.profile.nationalId}` : apt.user?.email ?? ""}</p>
+                      <p className="text-xs text-muted-foreground">{language === "ar" ? "الطلب" : "Application"}: <span className="font-mono">{apt.application?.applicationNumber ?? apt.applicationId}</span></p>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{apt.appointmentDate}</span>
                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{apt.startTime}</span>
-                        <span className="font-medium text-foreground">{apt.appointmentType?.replace(/_/g, " ")}</span>
-                        {apt.queueNumber && <span>Queue #{apt.queueNumber}</span>}
+                        <span className="font-medium text-foreground">{localizedLabel(apt.appointmentType, language)}</span>
+                        {apt.queueNumber && <span>{language === "ar" ? "الدور" : "Queue"} #{apt.queueNumber}</span>}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className={`text-xs ${STATUS_COLORS[apt.status] ?? "bg-slate-100 text-slate-700"}`}>{apt.status}</Badge>
+                    <Badge className={`text-xs ${STATUS_COLORS[apt.status] ?? "bg-slate-100 text-slate-700"}`}>{localizedLabel(apt.status, language)}</Badge>
                     {apt.status === "BOOKED" && (
                         <Button size="sm" variant="outline" className="text-xs h-7" onClick={(event) => { event.stopPropagation(); handleStatus(apt.id, "CHECKED_IN"); }} data-testid={`btn-checkin-${apt.id}`}>
                         Check In

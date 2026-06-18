@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Car, CircleDot, Construction, Leaf, User } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const cardBackground = {
   backgroundImage: `linear-gradient(135deg, rgba(74,184,225,.98), rgba(45,157,214,.99)), url("data:image/svg+xml,%3Csvg width='42' height='42' viewBox='0 0 42 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21 4l3.3 10.3h10.8l-8.7 6.3 3.3 10.4L21 24.6 12.3 31l3.3-10.4-8.7-6.3h10.8z' fill='none' stroke='%23074d75' stroke-width='1.05' opacity='.20'/%3E%3C/svg%3E")`,
@@ -18,13 +19,13 @@ function formatDate(value: string | undefined) {
   });
 }
 
-function categoryText(license: any) {
+function categoryText(license: any, language: "en" | "ar") {
   const category = license?.licenseCategory;
   if (!category) return fieldValue(license?.licenseCategoryCode ?? license?.category ?? license?.categoryCode);
   const code = category.code ? `${category.code} - ` : "";
   const en = category.nameEn ?? category.code ?? "-";
   const ar = category.nameAr ?? category.code ?? "-";
-  return `${code}${en} / ${ar}`;
+  return `${code}${language === "ar" ? ar : en}`;
 }
 
 function fieldValue(value?: string | number | null) {
@@ -37,18 +38,21 @@ function verificationUrl(serial: string) {
 }
 
 export function DigitalLicenseCard({ license, className = "" }: { license: any; className?: string }) {
+  const { language } = useLanguage();
   const [flipped, setFlipped] = useState(false);
   const serial = fieldValue(license?.licenseSerial ?? license?.licenseNumber ?? license?.id);
   const verify = useMemo(() => verificationUrl(serial), [serial]);
 
   return (
-    <div className={`rukhsty-license-print mx-auto w-full max-w-[620px] ${className}`}>
+    <div className={`rukhsty-license-print license-language-${language} mx-auto w-full max-w-[620px] ${className}`}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600;700&family=Tinos:wght@400;700&display=swap');
         .rukhsty-license-card-face { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .rukhsty-license-ar { font-family: "Noto Naskh Arabic", "Amiri", serif; }
         .rukhsty-license-en { font-family: "Tinos", Georgia, "Times New Roman", serif; }
         .rukhsty-license-value { font-family: "Tinos", "Noto Naskh Arabic", serif; letter-spacing: 0; }
+        .license-language-en .license-copy-ar { display: none !important; }
+        .license-language-ar .license-copy-en { display: none !important; }
         @media print {
           body * { visibility: hidden !important; }
           .rukhsty-license-print, .rukhsty-license-print * { visibility: visible !important; }
@@ -82,7 +86,7 @@ export function DigitalLicenseCard({ license, className = "" }: { license: any; 
           </div>
         </button>
         <QrVerification verify={verify} />
-        <p className="mt-2 text-center text-xs text-slate-500">Click the card to flip / اضغط على البطاقة لقلبها</p>
+        <p className="mt-2 text-center text-xs text-slate-500">{language === "ar" ? "اضغط على البطاقة لقلبها" : "Click the card to flip"}</p>
       </div>
 
       <div className="rukhsty-license-print-stack hidden">
@@ -95,11 +99,12 @@ export function DigitalLicenseCard({ license, className = "" }: { license: any; 
 }
 
 function LicenseShell({ children }: { children: React.ReactNode }) {
+  const { isRTL } = useLanguage();
   return (
     <section
       className="rukhsty-license-card-face relative h-full w-full overflow-hidden rounded-[10px] bg-[#3fb0e5] text-[#0d1820] shadow-[0_18px_45px_rgba(15,45,65,.22)]"
       style={cardBackground}
-      dir="ltr"
+      dir={isRTL ? "rtl" : "ltr"}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,.20),transparent_29%),linear-gradient(90deg,rgba(255,255,255,.14),transparent_38%,rgba(255,255,255,.10)),repeating-linear-gradient(0deg,rgba(255,255,255,.05)_0,rgba(255,255,255,.05)_1px,transparent_1px,transparent_5px)]" />
       <div className="relative h-full w-full">{children}</div>
@@ -108,6 +113,7 @@ function LicenseShell({ children }: { children: React.ReactNode }) {
 }
 
 function LicenseFront({ license, verify }: { license: any; verify: string }) {
+  const { language } = useLanguage();
   const fullNameEn = fieldValue(license?.fullNameEn ?? license?.fullName);
   const fullNameAr = fieldValue(license?.fullNameAr ?? license?.fullName);
   const photoUrl = license?.photoUrl ?? license?.profilePhotoUrl;
@@ -124,7 +130,7 @@ function LicenseFront({ license, verify }: { license: any; verify: string }) {
   return (
     <LicenseShell>
       <div className="relative z-10 h-full w-full overflow-hidden">
-        <div className="absolute left-[7.2%] top-[7.2%] rukhsty-license-en leading-tight text-[#172b48]">
+        <div className="license-copy-en absolute left-[7.2%] top-[7.2%] rukhsty-license-en leading-tight text-[#172b48]">
           <p className="text-[12px] font-bold sm:text-[14px]">The Hashemite Kingdom of Jordan</p>
           <p className="mt-0.5 text-[6px] font-bold sm:text-[7px]">Ministry of Interior - Licensing Department</p>
         </div>
@@ -133,7 +139,7 @@ function LicenseFront({ license, verify }: { license: any; verify: string }) {
           <HeaderEmblemFlags />
         </div>
 
-        <div className="absolute right-[6.5%] top-[6%] rukhsty-license-ar text-right leading-tight text-[#24324f]" dir="rtl">
+        <div className="license-copy-ar absolute right-[6.5%] top-[6%] rukhsty-license-ar text-right leading-tight text-[#24324f]" dir="rtl">
           <p className="text-[16px] font-bold sm:text-[19px]">المملكة الأردنية الهاشمية</p>
           <p className="mt-0.5 text-[8px] font-semibold sm:text-[9px]">وزارة الداخلية - إدارة الترخيص</p>
         </div>
@@ -156,8 +162,8 @@ function LicenseFront({ license, verify }: { license: any; verify: string }) {
 
         <div className="absolute left-[37%] right-[7.4%] top-[33.5%] z-20">
           <div className="relative mb-[2px] h-[20px] border-b-2 border-[#1d303b]">
-            <p className="rukhsty-license-en absolute left-[1%] top-[-4px] text-[17px] font-bold underline">Driving License</p>
-            <p className="rukhsty-license-ar absolute right-[1%] top-[-5px] text-[19px] font-bold" dir="rtl">رخصة القيادة</p>
+            <p className="license-copy-en rukhsty-license-en absolute left-[1%] top-[-4px] text-[17px] font-bold underline">Driving License</p>
+            <p className="license-copy-ar rukhsty-license-ar absolute right-[1%] top-[-5px] text-[19px] font-bold" dir="rtl">رخصة القيادة</p>
           </div>
           <ExactFrontRow ar="الاسم" en="Name" valueAr={fullNameAr} value={fullNameEn} />
           <ExactFrontRow ar="الجنسية" en="Nationality" valueAr="الأردن" value="Jordanian" />
@@ -186,15 +192,15 @@ function LicenseFront({ license, verify }: { license: any; verify: string }) {
 
         <div className="absolute left-[8.6%] top-[76.6%] z-20 grid w-[26.5%] grid-cols-[1fr_44%] border-b-2 border-[#1d303b] text-[#142833]">
           <div className="rukhsty-license-en text-center text-[6px] font-black leading-none sm:text-[7px]">
-            <p>License Type</p>
+            <p className="license-copy-en">License Type</p>
           </div>
-          <p className="rukhsty-license-ar text-right text-[8px] font-bold leading-none sm:text-[9px]" dir="rtl">فئة الرخصة</p>
-          <p className="col-span-2 truncate text-center text-[10px] font-black leading-none sm:text-[12px]">{categoryText(license)}</p>
+          <p className="license-copy-ar rukhsty-license-ar text-right text-[8px] font-bold leading-none sm:text-[9px]" dir="rtl">فئة الرخصة</p>
+          <p className="col-span-2 truncate text-center text-[10px] font-black leading-none sm:text-[12px]">{categoryText(license, language)}</p>
         </div>
 
         <div className="absolute bottom-[7px] left-[10px] right-[10px] flex items-center justify-between text-[6px] font-bold text-[#103747]/55">
           <span>{verify.replace(/^https?:\/\//, "")}</span>
-          <span className="rukhsty-license-ar" dir="rtl">نموذج رقمي عبر منصة رخصتي</span>
+          <span className="license-copy-ar rukhsty-license-ar" dir="rtl">نموذج رقمي عبر منصة رخصتي</span>
         </div>
       </div>
     </LicenseShell>
@@ -227,8 +233,8 @@ function LicenseBack({ verify }: { verify: string }) {
         </div>
 
         <div className="mt-0 flex items-end justify-center gap-8 border-b-2 border-[#1b3441]/80 pb-0.5">
-          <p className="rukhsty-license-en text-[16px] font-black">License Types</p>
-          <p className="rukhsty-license-ar text-[18px] font-bold" dir="rtl">فئات الرخص</p>
+          <p className="license-copy-en rukhsty-license-en text-[16px] font-black">License Types</p>
+          <p className="license-copy-ar rukhsty-license-ar text-[18px] font-bold" dir="rtl">فئات الرخص</p>
         </div>
 
         <div className="mt-1 flex-1 pl-8">
@@ -237,9 +243,9 @@ function LicenseBack({ verify }: { verify: string }) {
               {rows.map(([code, en, ar, icon]) => (
                 <tr key={code} className="border-b border-[#1b3441]/80">
                   <td className="w-[9%] border-r border-[#1b3441]/80 px-0.5">{code}</td>
-                  <td className="w-[42%] border-r border-[#1b3441]/80 px-1">{en}</td>
+                  <td className="license-copy-en w-[42%] border-r border-[#1b3441]/80 px-1">{en}</td>
                   <td className="w-[8%] border-r border-[#1b3441]/80 text-center"><VehicleIcon kind={icon} /></td>
-                  <td className="rukhsty-license-ar px-1 text-right" dir="rtl">{ar}</td>
+                  <td className="license-copy-ar rukhsty-license-ar px-1 text-right" dir="rtl">{ar}</td>
                 </tr>
               ))}
             </tbody>
@@ -256,12 +262,12 @@ function LicenseBack({ verify }: { verify: string }) {
 
         <div className="mt-1 border-t-4 border-[#1f7a44] bg-[#d72b38] px-2 py-1 text-[5px] font-bold leading-tight text-white sm:text-[6px]">
           <div className="flex gap-2">
-            <span>1. Give Way to Ambulances, Fire Department, Police & Official Convoy Vehicles.</span>
-            <span className="rukhsty-license-ar flex-1 text-right" dir="rtl">١. إفساح المجال لسيارات الإسعاف والدفاع المدني والشرطة والمواكب الرسمية.</span>
+            <span className="license-copy-en">1. Give Way to Ambulances, Fire Department, Police & Official Convoy Vehicles.</span>
+            <span className="license-copy-ar rukhsty-license-ar flex-1 text-right" dir="rtl">١. إفساح المجال لسيارات الإسعاف والدفاع المدني والشرطة والمواكب الرسمية.</span>
           </div>
           <div className="mt-0.5 flex gap-2">
-            <span>2. This license must be carried at all times while driving. Show it to policemen when asked.</span>
-            <span className="rukhsty-license-ar flex-1 text-right" dir="rtl">٢. يجب حمل الرخصة أثناء القيادة وإبرازها لرجال الأمن العام عند الطلب.</span>
+            <span className="license-copy-en">2. This license must be carried at all times while driving. Show it to policemen when asked.</span>
+            <span className="license-copy-ar rukhsty-license-ar flex-1 text-right" dir="rtl">٢. يجب حمل الرخصة أثناء القيادة وإبرازها لرجال الأمن العام عند الطلب.</span>
           </div>
         </div>
 
@@ -327,17 +333,17 @@ function ExactFrontRow({
     <div className={`grid min-h-[14px] grid-cols-[1fr_72px] items-center leading-none ${noBorder ? "" : "border-b-2 border-[#1d303b]"}`}>
       <div className="min-w-0 px-1 text-center">
         {valueAr && (
-          <p className="rukhsty-license-ar truncate text-[9px] font-bold sm:text-[10px]" dir="rtl">
+          <p className="license-copy-ar rukhsty-license-ar truncate text-[9px] font-bold sm:text-[10px]" dir="rtl">
             {fieldValue(valueAr)}
           </p>
         )}
-        <p className={`rukhsty-license-value truncate text-[9px] font-bold ${mono ? "font-mono tracking-normal" : ""} ${en === "Name" ? "uppercase" : ""} sm:text-[10px]`}>
+        <p className={`${valueAr ? "license-copy-en" : ""} rukhsty-license-value truncate text-[9px] font-bold ${mono ? "font-mono tracking-normal" : ""} ${en === "Name" ? "uppercase" : ""} sm:text-[10px]`}>
           {fieldValue(value)}
         </p>
       </div>
-      <div className="rukhsty-license-ar pr-1 text-right text-[#142833]" dir="rtl">
-        <p className="text-[8px] font-bold sm:text-[9px]">{ar}</p>
-        <p className="rukhsty-license-en text-[5px] font-bold sm:text-[6px]">{en}</p>
+      <div className="pr-1 text-right text-[#142833]" dir="rtl">
+        <p className="license-copy-ar rukhsty-license-ar text-[8px] font-bold sm:text-[9px]">{ar}</p>
+        <p className="license-copy-en rukhsty-license-en text-[5px] font-bold sm:text-[6px]">{en}</p>
       </div>
     </div>
   );
@@ -367,13 +373,14 @@ function Restriction({ number, labelEn, labelAr }: { number?: string; labelEn: s
   return (
     <div className="border-r border-[#1b3441]/80 px-1 py-0.5 last:border-r-0">
       {number && <span className="float-left text-[clamp(5px,.9vw,8px)]">{number}</span>}
-      <p className="rukhsty-license-ar" dir="rtl">{labelAr}</p>
-      <p className="rukhsty-license-en">{labelEn}</p>
+      <p className="license-copy-ar rukhsty-license-ar" dir="rtl">{labelAr}</p>
+      <p className="license-copy-en rukhsty-license-en">{labelEn}</p>
     </div>
   );
 }
 
 function QrVerification({ verify }: { verify: string }) {
+  const { language } = useLanguage();
   return (
     <div className="mx-auto mt-5 flex w-full max-w-[220px] flex-col items-center rounded-xl bg-white p-3 shadow-sm print:shadow-none">
       <img
@@ -381,7 +388,9 @@ function QrVerification({ verify }: { verify: string }) {
         alt="Rukhsty license verification QR code"
         className="h-40 w-40"
       />
-      <p className="rukhsty-license-ar mt-2 text-center text-xs font-bold text-[#0e5c3a]" dir="rtl">تحقق عبر منصة رخصتي / Verify via RukhsTy</p>
+      <p className="mt-2 text-center text-xs font-bold text-[#0e5c3a]" dir={language === "ar" ? "rtl" : "ltr"}>
+        {language === "ar" ? "تحقق عبر منصة رخصتي" : "Verify via Rukhsty"}
+      </p>
     </div>
   );
 }

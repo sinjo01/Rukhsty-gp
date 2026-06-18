@@ -18,9 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { localizedGovernorate, localizedLabel } from "@/lib/locale-labels";
 import { motion } from "framer-motion";
 import { ArrowLeft, CheckCircle, Circle, Clock, XCircle, Minus, Building2, Calendar, FileText, Activity, Stethoscope, Route, Sparkles, CreditCard, Truck } from "lucide-react";
-import { currentStepLabel, isMedicalBookingRequired, isPracticalBookingRequired, isTheoryBookingRequired, statusLabel } from "./application-utils";
+import { currentStepLabel, examRebookingInfo, isMedicalBookingRequired, isPracticalBookingRequired, isTheoryBookingRequired, statusLabel } from "./application-utils";
 import { DigitalLicenseCard } from "./digital-license-card";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -142,8 +143,8 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
 
   if (!app) return (
     <div className="text-center py-20">
-      <p className="text-muted-foreground">Application not found</p>
-      <Link href="/applications"><Button variant="link">Back to Applications</Button></Link>
+      <p className="text-muted-foreground">{language === "ar" ? "الطلب غير موجود" : "Application not found"}</p>
+      <Link href="/applications"><Button variant="link">{language === "ar" ? "العودة إلى الطلبات" : "Back to Applications"}</Button></Link>
     </div>
   );
 
@@ -154,11 +155,12 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
   const progressPercent = orderedSteps.length > 0 ? Math.round((completedSteps / orderedSteps.length) * 100) : 0;
   const appointments = detail.appointments ?? [];
   const exams = detail.exams ?? [];
+  const rebooking = examRebookingInfo(detail);
   const displayLicense = paymentLicense ?? detail.license ?? null;
   const paymentStatus = displayLicense?.paymentStatus ?? detail.paymentStatus ?? "unpaid";
   const isPaid = paymentStatus === "paid";
   const showPaymentCard = isLicensePaymentEligible(detail.status) && !isPaid;
-  const showIssuedLicense = Boolean(displayLicense) && (detail.status === "LICENSE_ISSUED" || isPaid);
+  const showIssuedLicense = Boolean(displayLicense) && isPaid;
   const deliveryMethod = displayLicense?.deliveryMethod ?? detail.deliveryMethod;
   const deliveryStatus = displayLicense?.deliveryStatus ?? detail.deliveryStatus;
   const aramexTrackingNumber = displayLicense?.aramexTrackingNumber ?? detail.aramexTrackingNumber;
@@ -376,6 +378,30 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
         </Card>
       </motion.div>
 
+      {rebooking && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-red-900">
+                {rebooking.examType === "THEORY"
+                  ? language === "ar" ? "لم يتم اجتياز الامتحان النظري" : "Theory exam was not passed"
+                  : language === "ar" ? "لم يتم اجتياز الامتحان العملي" : "Practical exam was not passed"}
+              </p>
+              <p className="mt-1 text-sm text-red-800">
+                {language === "ar"
+                  ? `يظهر الرسوب في مسار الطلب. يمكنك اختيار موعد امتحان جديد بتاريخ ${rebooking.earliestDate} أو بعده، بعد 14 يوماً من تاريخ الامتحان السابق.`
+                  : `The failed result is recorded in your application tracking. You can choose a new exam appointment on or after ${rebooking.earliestDate}, 14 days after the previous exam.`}
+              </p>
+            </div>
+            <Link href={`/applications/${detail.id}/${rebooking.examType === "THEORY" ? "book-theory" : "book-practical"}`}>
+              <Button className="shrink-0 bg-red-700 hover:bg-red-800">
+                {language === "ar" ? "اختيار موعد جديد" : "Choose New Appointment"}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {booking && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
@@ -405,13 +431,13 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
       {detail.currentStep === "LICENSE_ISSUANCE" && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
-            <p className="font-medium text-sm text-amber-900">Waiting for DVLD/Admin license issuance</p>
-            <p className="text-xs text-amber-800 mt-1">Your practical result is complete. An authorized officer must issue the digital license.</p>
+            <p className="font-medium text-sm text-amber-900">{language === "ar" ? "بانتظار إصدار الرخصة من موظف الترخيص" : "Waiting for license issuance"}</p>
+            <p className="text-xs text-amber-800 mt-1">{language === "ar" ? "اكتملت نتيجة الامتحان العملي، ويجب على موظف مخول إصدار الرخصة الرقمية." : "Your practical result is complete. An authorized officer must issue the digital license."}</p>
           </CardContent>
         </Card>
       )}
 
-      {detail.status === "LICENSE_ISSUED" && (
+      {detail.status === "LICENSE_ISSUED" && isPaid && (
         <Card className="overflow-hidden border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20">
           <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
             <div>
@@ -480,7 +506,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
                 </div>
               )}
 
-              <div className="rounded-2xl border p-4">
+              {isPaid && <div className="rounded-2xl border p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="flex items-center gap-2 font-semibold text-emerald-950">
@@ -521,7 +547,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
                   </div>
                 )}
 
-              </div>
+              </div>}
             </CardContent>
           </Card>
         </motion.div>
@@ -532,28 +558,28 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2"><Activity className="w-4 h-4 text-amber-500" />Training</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Activity className="w-4 h-4 text-amber-500" />{language === "ar" ? "التدريب" : "Training"}</CardTitle>
             </CardHeader>
             <CardContent>
               {detail.trainingRecord.center && (
                 <div className="flex items-center gap-2 mb-3 text-sm">
                   <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{detail.trainingRecord.center.nameEn}</span>
-                  <span className="text-muted-foreground">· {detail.trainingRecord.center.governorate}</span>
+                  <span className="font-medium">{language === "ar" ? detail.trainingRecord.center.nameAr : detail.trainingRecord.center.nameEn}</span>
+                  <span className="text-muted-foreground">· {localizedGovernorate(detail.trainingRecord.center.governorate, language)}</span>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Theory Lessons</p>
+                  <p className="text-xs text-muted-foreground">{language === "ar" ? "الدروس النظرية" : "Theory Lessons"}</p>
                   <p className="font-semibold">{detail.trainingRecord.theoreticalLessonsCompleted} / {detail.trainingRecord.theoreticalLessonsRequired}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Practical Lessons</p>
+                  <p className="text-xs text-muted-foreground">{language === "ar" ? "الدروس العملية" : "Practical Lessons"}</p>
                   <p className="font-semibold">{detail.trainingRecord.practicalLessonsCompleted} / {detail.trainingRecord.practicalLessonsRequired}</p>
                 </div>
               </div>
               <Badge className={`mt-3 text-xs ${detail.trainingRecord.status === "COMPLETED" ? "bg-green-100 text-green-700" : detail.trainingRecord.status === "IN_PROGRESS" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
-                {detail.trainingRecord.status?.replace(/_/g, " ")}
+                {localizedLabel(detail.trainingRecord.status, language)}
               </Badge>
             </CardContent>
           </Card>
@@ -565,13 +591,13 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2"><Stethoscope className="w-4 h-4 text-purple-500" />Medical Test</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Stethoscope className="w-4 h-4 text-purple-500" />{language === "ar" ? "الفحص الطبي" : "Medical Test"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-3 text-sm">
-                <div><p className="text-xs text-muted-foreground">Result</p><Badge className={`mt-1 text-xs ${["DOES_NOT_NEED_GLASSES", "NEEDS_GLASSES", "PASS_NO_GLASSES", "PASS_WITH_GLASSES"].includes(detail.medicalTest.result) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{detail.medicalTest.result?.replace(/_/g, " ")}</Badge></div>
-                <div><p className="text-xs text-muted-foreground">Left Eye</p><p className="font-medium">{detail.medicalTest.leftEyeScore ?? "—"}</p></div>
-                <div><p className="text-xs text-muted-foreground">Right Eye</p><p className="font-medium">{detail.medicalTest.rightEyeScore ?? "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">{language === "ar" ? "النتيجة" : "Result"}</p><Badge className={`mt-1 text-xs ${["DOES_NOT_NEED_GLASSES", "NEEDS_GLASSES", "PASS_NO_GLASSES", "PASS_WITH_GLASSES"].includes(detail.medicalTest.result) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{localizedLabel(detail.medicalTest.result, language)}</Badge></div>
+                <div><p className="text-xs text-muted-foreground">{language === "ar" ? "العين اليسرى" : "Left Eye"}</p><p className="font-medium">{detail.medicalTest.leftEyeScore ?? "—"}</p></div>
+                <div><p className="text-xs text-muted-foreground">{language === "ar" ? "العين اليمنى" : "Right Eye"}</p><p className="font-medium">{detail.medicalTest.rightEyeScore ?? "—"}</p></div>
               </div>
             </CardContent>
           </Card>
@@ -582,17 +608,17 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
       {exams.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base">Exams</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">{language === "ar" ? "الامتحانات" : "Exams"}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {exams.map((exam: any) => (
                   <div key={exam.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium">{exam.examType} Exam — Attempt #{exam.attemptNumber}</p>
-                      {exam.score && <p className="text-xs text-muted-foreground">Score: {exam.score} / {exam.maxScore}</p>}
+                      <p className="text-sm font-medium">{localizedLabel(exam.examType, language)} — {language === "ar" ? "المحاولة" : "Attempt"} #{exam.attemptNumber}</p>
+                      {exam.score && <p className="text-xs text-muted-foreground">{language === "ar" ? "العلامة" : "Score"}: {exam.score} / {exam.maxScore}</p>}
                     </div>
                     <Badge className={`text-xs ${exam.result === "PASSED" ? "bg-green-100 text-green-700" : exam.result === "FAILED" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"}`}>
-                      {exam.result}
+                      {localizedLabel(exam.result, language)}
                     </Badge>
                   </div>
                 ))}
@@ -606,19 +632,19 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
       {appointments.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />Appointments</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500" />{language === "ar" ? "المواعيد" : "Appointments"}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {appointments.map((apt: any) => (
                   <div key={apt.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium">{apt.appointmentType?.replace(/_/g, " ")}</p>
+                      <p className="text-sm font-medium">{localizedLabel(apt.appointmentType, language)}</p>
                       <p className="text-xs text-muted-foreground">{apt.appointmentDate} · {apt.startTime} – {apt.endTime}</p>
-                      {apt.center && <p className="text-xs text-muted-foreground">{apt.center.nameEn}</p>}
-                      {apt.queueNumber && <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">Queue #{apt.queueNumber}</p>}
+                      {apt.center && <p className="text-xs text-muted-foreground">{language === "ar" ? apt.center.nameAr : apt.center.nameEn}</p>}
+                      {apt.queueNumber && <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">{language === "ar" ? "الدور" : "Queue"} #{apt.queueNumber}</p>}
                     </div>
                     <Badge className={`text-xs ${apt.status === "BOOKED" ? "bg-blue-100 text-blue-700" : apt.status === "COMPLETED" ? "bg-green-100 text-green-700" : apt.status === "CANCELLED" ? "bg-slate-100 text-slate-600" : "bg-slate-100 text-slate-700"}`}>
-                      {apt.status}
+                      {localizedLabel(apt.status, language)}
                     </Badge>
                   </div>
                 ))}
@@ -632,7 +658,7 @@ export default function ApplicationDetail({ params }: { params: { id: string } }
       {detail.documents?.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><FileText className="w-4 h-4 text-muted-foreground" />Documents</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><FileText className="w-4 h-4 text-muted-foreground" />{language === "ar" ? "المستندات" : "Documents"}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {detail.documents.map((doc: any) => (

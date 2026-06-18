@@ -251,25 +251,21 @@ function VehicleRegistrationCard({ vehicle, language }: { vehicle: Vehicle; lang
     <div className="mx-auto w-full max-w-xl overflow-hidden rounded-xl border-4 border-[#0e5c3a] bg-gradient-to-br from-[#eef9fb] to-[#d7f0ea] p-5 text-left shadow-sm" dir="ltr">
       <div className="flex items-start justify-between border-b border-[#0e5c3a]/40 pb-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#0e5c3a]">Rukhsty DVLD</p>
-          <h3 className="text-xl font-bold text-[#0d3327]">Vehicle Registration</h3>
-        </div>
-        <div className="text-right" dir="rtl">
-          <p className="text-xs font-bold text-[#0e5c3a]">منصة رخصتي</p>
-          <h3 className="text-lg font-bold text-[#0d3327]">ترخيص المركبة</h3>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#0e5c3a]">{language === "ar" ? "منصة رخصتي" : "Rukhsty DVLD"}</p>
+          <h3 className="text-xl font-bold text-[#0d3327]">{language === "ar" ? "ترخيص المركبة" : "Vehicle Registration"}</h3>
         </div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <Doc label="Plate number / رقم اللوحة" value={vehicle.plateNumber} />
-        <Doc label="Registration No / رقم التسجيل" value={vehicle.registrationNumber} />
-        <Doc label="Type / النوع" value={vehicle.vehicleType} />
-        <Doc label="Make & model / الصنع والطراز" value={`${make} ${vehicle.model ?? ""}`} />
-        <Doc label="Year / السنة" value={String(year)} />
-        <Doc label="Color / اللون" value={vehicle.color} />
-        <Doc label="Chassis No / رقم الشاصي" value={vehicle.chassisNumber} />
-        <Doc label="Owner National ID / الرقم الوطني" value={vehicle.ownerNationalId} />
-        <Doc label="Expiry / تاريخ الانتهاء" value={vehicle.registrationExpiryDate ?? vehicle.currentLicenseExpiry} />
-        <Doc label="Status / الحالة" value={vehicle.status ?? "ACTIVE"} />
+        <Doc label={language === "ar" ? "رقم اللوحة" : "Plate number"} value={vehicle.plateNumber} />
+        <Doc label={language === "ar" ? "رقم التسجيل" : "Registration No"} value={vehicle.registrationNumber} />
+        <Doc label={language === "ar" ? "النوع" : "Type"} value={vehicle.vehicleType} />
+        <Doc label={language === "ar" ? "الصنع والطراز" : "Make & model"} value={`${make} ${vehicle.model ?? ""}`} />
+        <Doc label={language === "ar" ? "السنة" : "Year"} value={String(year)} />
+        <Doc label={language === "ar" ? "اللون" : "Color"} value={vehicle.color} />
+        <Doc label={language === "ar" ? "رقم الشاصي" : "Chassis No"} value={vehicle.chassisNumber} />
+        <Doc label={language === "ar" ? "الرقم الوطني للمالك" : "Owner National ID"} value={vehicle.ownerNationalId} />
+        <Doc label={language === "ar" ? "تاريخ الانتهاء" : "Expiry"} value={vehicle.registrationExpiryDate ?? vehicle.currentLicenseExpiry} />
+        <Doc label={language === "ar" ? "الحالة" : "Status"} value={vehicle.status ?? "ACTIVE"} />
       </div>
       <div className="mt-4 flex items-center justify-between rounded-lg bg-white/70 p-3 text-xs text-slate-600">
         <span>{language === "ar" ? "رمز تحقق تجريبي" : "Verification placeholder"}</span>
